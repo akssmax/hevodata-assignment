@@ -160,7 +160,7 @@ export function WeekCalendar() {
                   {HOURS.map((hour) => (
                     <div
                       key={hour}
-                      className="border-t border-border/60"
+                      className="border-t border-border/60 transition-colors hover:bg-accent/5"
                       style={{ height: HOUR_HEIGHT }}
                     />
                   ))}
