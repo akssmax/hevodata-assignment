@@ -16,13 +16,17 @@ import { EmptyState } from "@/components/empty-state";
 import { IconCalendar, IconChevronRight, IconInbox } from "@/components/icons";
 import { PriorityIcon } from "@/components/issue/priority-icon";
 import { StatusChip } from "@/components/issue/status-chip";
-import { useWorkspace } from "@/components/workspace-provider";
+import { useSearch, useWorkspace } from "@/components/workspace-provider";
 import { useIssues } from "@/hooks/use-issues";
 import { PRIORITY_LABELS, STATUS_DOT, STATUS_LABELS } from "@/lib/constants";
 import { formatTimeRange, toDateKey } from "@/lib/dates";
 import type { Issue, Status } from "@/lib/types";
 
 const STATUS_ORDER: Status[] = ["in_progress", "todo", "backlog", "done"];
+
+const coreRowModel = getCoreRowModel<Issue>();
+const groupedRowModel = getGroupedRowModel<Issue>();
+const expandedRowModel = getExpandedRowModel<Issue>();
 
 const columns: LegacyColumnDef<Issue>[] = [
   {
@@ -104,7 +108,8 @@ const columns: LegacyColumnDef<Issue>[] = [
 ];
 
 export function IssueList() {
-  const { search, setSearch, openIssue, openCreate, activePersonaId } = useWorkspace();
+  const { search, setSearch } = useSearch();
+  const { openIssue, openCreate, activePersonaId } = useWorkspace();
   const issues = useIssues(activePersonaId, search);
   const [expanded, setExpanded] = useState<ExpandedState>(true);
 
@@ -115,9 +120,9 @@ export function IssueList() {
     columns,
     state: { grouping: ["status"], expanded },
     onExpandedChange: setExpanded,
-    getCoreRowModel: getCoreRowModel(),
-    getGroupedRowModel: getGroupedRowModel(),
-    getExpandedRowModel: getExpandedRowModel(),
+    getCoreRowModel: coreRowModel,
+    getGroupedRowModel: groupedRowModel,
+    getExpandedRowModel: expandedRowModel,
     groupedColumnMode: false,
   });
 

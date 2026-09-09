@@ -39,16 +39,17 @@ export async function createIssue(input: CreateIssueInput): Promise<Issue> {
   const createdAt = nowIso();
   const status = input.status ?? "todo";
   const schedule = normalizeSchedule(input.startAt, input.endAt);
+  const [identifier, lastRankValue] = await Promise.all([nextIdentifier(), lastRank(status)]);
   const issue: Issue = {
     id: crypto.randomUUID(),
-    identifier: await nextIdentifier(),
+    identifier,
     ownerId: input.ownerId,
     kind: input.kind ?? "task",
     title: input.title.trim(),
     description: input.description?.trim() ?? "",
     status,
     priority: input.priority ?? "none",
-    rank: rankBetween(await lastRank(status)),
+    rank: rankBetween(lastRankValue),
     dueDate: input.dueDate,
     startAt: schedule.startAt,
     endAt: schedule.endAt,

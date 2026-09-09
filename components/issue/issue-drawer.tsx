@@ -15,10 +15,10 @@ import {
 import { motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { IconCalendar, IconPlus } from "@/components/icons";
-import { FieldSelect } from "@/components/issue/field-select";
+import { FieldSelect, PriorityOptionIcon, StatusDotIcon } from "@/components/issue/field-select";
 import { DateTimeField, DueDateField } from "@/components/issue/schedule-fields";
 import { useWorkspace } from "@/components/workspace-provider";
-import { useIssues } from "@/hooks/use-issues";
+import { useIssue } from "@/hooks/use-issues";
 import { PRIORITY_LABELS, STATUS_LABELS } from "@/lib/constants";
 import { formatTimeRange } from "@/lib/dates";
 import {
@@ -29,8 +29,11 @@ import {
   deleteIssue,
   updateIssue,
 } from "@/lib/issue-service";
-import { getPersona } from "@/lib/personas";
+import { getPersona, personaAvatarStyle } from "@/lib/personas";
 import { PRIORITIES, STATUSES, type Issue, type Priority, type Status } from "@/lib/types";
+
+const STATUS_OPTIONS = STATUSES.map((id) => ({ id, label: STATUS_LABELS[id] }));
+const PRIORITY_OPTIONS = PRIORITIES.map((id) => ({ id, label: PRIORITY_LABELS[id] }));
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -78,10 +81,10 @@ function AttachmentsSection({ issue }: { issue: Issue }) {
     if (!files?.length) return;
     setUploading(true);
     try {
-      for (const file of Array.from(files).slice(0, 5)) {
-        if (file.size > 2 * 1024 * 1024) continue; // keep IndexedDB light
-        await addAttachment(issue.id, await readFile(file));
-      }
+      const eligible = Array.from(files)
+        .slice(0, 5)
+        .filter((file) => file.size <= 2 * 1024 * 1024);
+      await Promise.all(eligible.map((file) => readFile(file).then((data) => addAttachment(issue.id, data))));
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -196,9 +199,7 @@ function CommentsSection({ issue }: { issue: Issue }) {
                 className="group flex gap-2.5"
               >
                 <Avatar size="sm">
-                  <Avatar.Fallback
-                    style={{ backgroundColor: `${author.color}33`, color: author.color }}
-                  >
+                  <Avatar.Fallback style={personaAvatarStyle(author)}>
                     {author.initials}
                   </Avatar.Fallback>
                 </Avatar>
@@ -225,9 +226,7 @@ function CommentsSection({ issue }: { issue: Issue }) {
       )}
       <div className="flex items-start gap-2.5">
         <Avatar size="sm">
-          <Avatar.Fallback
-            style={{ backgroundColor: `${persona.color}33`, color: persona.color }}
-          >
+          <Avatar.Fallback style={personaAvatarStyle(persona)}>
             {persona.initials}
           </Avatar.Fallback>
         </Avatar>
@@ -260,14 +259,13 @@ function CommentsSection({ issue }: { issue: Issue }) {
 }
 
 export function IssueDrawer() {
-  const { selectedIssueId, closeIssue, activePersonaId } = useWorkspace();
-  const issues = useIssues(activePersonaId);
-  const liveIssue = issues?.find((item) => item.id === selectedIssueId);
+  const { selectedIssueId, closeIssue } = useWorkspace();
+  const liveIssue = useIssue(selectedIssueId);
   // Keep rendering the last issue while the drawer animates closed.
   const lastIssueRef = useRef(liveIssue);
   if (liveIssue) lastIssueRef.current = liveIssue;
   const issue = liveIssue ?? (selectedIssueId ? undefined : lastIssueRef.current);
-  const loading = Boolean(selectedIssueId) && issues === undefined;
+  const loading = Boolean(selectedIssueId) && liveIssue === undefined;
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [status, setStatus] = useState<Status>("todo");
@@ -348,7 +346,8 @@ export function IssueDrawer() {
                     <PropertyRow label="Status">
                       <FieldSelect
                         label=""
-                        options={STATUSES.map((id) => ({ id, label: STATUS_LABELS[id] }))}
+                        options={STATUS_OPTIONS}
+                        renderIcon={(id) => <StatusDotIcon status={id} />}
                         value={status}
                         onChange={(next) => {
                           setStatus(next);
@@ -359,7 +358,8 @@ export function IssueDrawer() {
                     <PropertyRow label="Priority">
                       <FieldSelect
                         label=""
-                        options={PRIORITIES.map((id) => ({ id, label: PRIORITY_LABELS[id] }))}
+                        options={PRIORITY_OPTIONS}
+                        renderIcon={(id) => <PriorityOptionIcon priority={id} />}
                         value={priority}
                         onChange={(next) => {
                           setPriority(next);
@@ -370,12 +370,7 @@ export function IssueDrawer() {
                     <PropertyRow label="Assignee">
                       <div className="flex items-center gap-2 rounded-lg border border-border px-2.5 py-2">
                         <Avatar size="sm">
-                          <Avatar.Fallback
-                            style={{
-                              backgroundColor: `${owner!.color}33`,
-                              color: owner!.color,
-                            }}
-                          >
+                          <Avatar.Fallback style={personaAvatarStyle(owner!)}>
                             {owner!.initials}
                           </Avatar.Fallback>
                         </Avatar>

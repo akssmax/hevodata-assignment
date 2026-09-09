@@ -2,12 +2,13 @@
 
 import { Chip } from "@heroui/react";
 import { motion } from "framer-motion";
+import { memo } from "react";
 import { IconCalendar } from "@/components/icons";
 import { PriorityIcon } from "@/components/issue/priority-icon";
 import { formatTimeRange, toDateKey } from "@/lib/dates";
 import type { Issue } from "@/lib/types";
 
-export function IssueCard({
+export const IssueCard = memo(function IssueCard({
   issue,
   onOpen,
 }: {
@@ -26,7 +27,7 @@ export function IssueCard({
       whileHover={{ y: -2 }}
       whileTap={{ scale: 0.98 }}
       transition={{ type: "spring", stiffness: 500, damping: 32 }}
-      className="w-full rounded-lg border border-border bg-surface/60 px-3 py-2.5 text-left transition-colors hover:border-border/60 hover:bg-surface"
+      className="w-full rounded-lg border border-border/70 bg-surface px-3 py-2.5 text-left shadow-sm transition-colors hover:border-border hover:bg-surface"
     >
       <div className="mb-1.5 flex items-center gap-2">
         <PriorityIcon priority={issue.priority} />
@@ -51,4 +52,4 @@ export function IssueCard({
       )}
     </motion.button>
   );
-}
+});

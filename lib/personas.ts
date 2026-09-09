@@ -40,3 +40,8 @@ export const DEFAULT_PERSONA_ID = "arjun";
 export function getPersona(id: string): Persona {
   return PERSONAS.find((persona) => persona.id === id) ?? PERSONAS[0];
 }
+
+/** Solid pastel background + dark text — readable in both light and dark themes. */
+export function personaAvatarStyle(persona: Persona): React.CSSProperties {
+  return { backgroundColor: persona.color, color: "#1e293b" }; // slate-800 on 300-shade pastel
+}

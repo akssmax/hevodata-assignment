@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { addDays, parseDateKey, startOfDay, toDateKey } from "@/lib/dates";
 import { DEFAULT_PERSONA_ID } from "@/lib/personas";
 import { ensureSeeded } from "@/lib/seed";
 import type { IssueKind, Status } from "@/lib/types";
@@ -13,14 +14,21 @@ export interface CreateDraft {
   kind?: IssueKind;
 }
 
+interface SearchContextValue {
+  search: string;
+  setSearch: (value: string) => void;
+}
+
 interface WorkspaceContextValue {
   ready: boolean;
   activePersonaId: string;
   setActivePersona: (id: string) => void;
   sidebarCollapsed: boolean;
   toggleSidebar: () => void;
-  search: string;
-  setSearch: (value: string) => void;
+  viewDate: Date;
+  setViewDate: (date: Date) => void;
+  goToPreviousDay: () => void;
+  goToNextDay: () => void;
   createOpen: boolean;
   createDraft: CreateDraft;
   openCreate: (draft?: CreateDraft) => void;
@@ -30,10 +38,12 @@ interface WorkspaceContextValue {
   closeIssue: () => void;
 }
 
+const SearchContext = createContext<SearchContextValue | null>(null);
 const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
 
 const PERSONA_KEY = "dayline:persona";
 const SIDEBAR_KEY = "dayline:sidebar-collapsed";
+const VIEW_DATE_KEY = "dayline:view-date";
 
 export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
@@ -43,11 +53,20 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [createOpen, setCreateOpen] = useState(false);
   const [createDraft, setCreateDraft] = useState<CreateDraft>({});
   const [selectedIssueId, setSelectedIssueId] = useState<string | null>(null);
+  const [viewDate, setViewDateState] = useState(() => startOfDay());
 
   useEffect(() => {
     const savedPersona = window.localStorage.getItem(PERSONA_KEY);
     if (savedPersona) setActivePersonaId(savedPersona);
     setSidebarCollapsed(window.localStorage.getItem(SIDEBAR_KEY) === "true");
+    const savedViewDate = window.localStorage.getItem(VIEW_DATE_KEY);
+    if (savedViewDate) {
+      try {
+        setViewDateState(startOfDay(parseDateKey(savedViewDate)));
+      } catch {
+        // ignore invalid persisted date
+      }
+    }
     ensureSeeded().finally(() => setReady(true));
   }, []);
 
@@ -84,6 +103,28 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     setSelectedIssueId(null);
   }, []);
 
+  const setViewDate = useCallback((date: Date) => {
+    const normalized = startOfDay(date);
+    setViewDateState(normalized);
+    window.localStorage.setItem(VIEW_DATE_KEY, toDateKey(normalized));
+  }, []);
+
+  const goToPreviousDay = useCallback(() => {
+    setViewDateState((prev) => {
+      const next = startOfDay(addDays(prev, -1));
+      window.localStorage.setItem(VIEW_DATE_KEY, toDateKey(next));
+      return next;
+    });
+  }, []);
+
+  const goToNextDay = useCallback(() => {
+    setViewDateState((prev) => {
+      const next = startOfDay(addDays(prev, 1));
+      window.localStorage.setItem(VIEW_DATE_KEY, toDateKey(next));
+      return next;
+    });
+  }, []);
+
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
       const target = event.target as HTMLElement | null;
@@ -102,15 +143,25 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [openCreate]);
 
-  const value = useMemo(
+  const searchValue = useMemo(
+    () => ({
+      search,
+      setSearch,
+    }),
+    [search],
+  );
+
+  const workspaceValue = useMemo(
     () => ({
       ready,
       activePersonaId,
       setActivePersona,
       sidebarCollapsed,
       toggleSidebar,
-      search,
-      setSearch,
+      viewDate,
+      setViewDate,
+      goToPreviousDay,
+      goToNextDay,
       createOpen,
       createDraft,
       openCreate,
@@ -125,7 +176,10 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       setActivePersona,
       sidebarCollapsed,
       toggleSidebar,
-      search,
+      viewDate,
+      setViewDate,
+      goToPreviousDay,
+      goToNextDay,
       createOpen,
       createDraft,
       openCreate,
@@ -136,7 +190,19 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     ],
   );
 
-  return <WorkspaceContext.Provider value={value}>{children}</WorkspaceContext.Provider>;
+  return (
+    <SearchContext.Provider value={searchValue}>
+      <WorkspaceContext.Provider value={workspaceValue}>{children}</WorkspaceContext.Provider>
+    </SearchContext.Provider>
+  );
+}
+
+export function useSearch() {
+  const context = useContext(SearchContext);
+  if (!context) {
+    throw new Error("useSearch must be used within WorkspaceProvider");
+  }
+  return context;
 }
 
 export function useWorkspace() {

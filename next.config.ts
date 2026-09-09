@@ -1,7 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  experimental: {
+    optimizePackageImports: ["@heroui/react", "@internationalized/date"],
+  },
 };
 
 export default nextConfig;

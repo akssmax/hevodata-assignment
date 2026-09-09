@@ -2,10 +2,12 @@
 
 import { Chip, Spinner } from "@heroui/react";
 import { motion } from "framer-motion";
+import { useMemo } from "react";
 import { EmptyState } from "@/components/empty-state";
 import { IconCalendar, IconInbox } from "@/components/icons";
 import { IssueCard } from "@/components/issue/issue-card";
-import { useWorkspace } from "@/components/workspace-provider";
+import { ProgressBlock } from "@/components/today/progress-block";
+import { useSearch, useWorkspace } from "@/components/workspace-provider";
 import { useIssues } from "@/hooks/use-issues";
 import { CALENDAR_END_HOUR, CALENDAR_START_HOUR } from "@/lib/constants";
 import { formatTimeRange, minutesSinceStart, startOfDay, toDateKey } from "@/lib/dates";
@@ -51,9 +53,11 @@ const section = {
 function DayStrip({
   scheduled,
   onOpen,
+  showNow,
 }: {
   scheduled: Issue[];
   onOpen: (id: string) => void;
+  showNow: boolean;
 }) {
   const now = new Date();
   const nowMinutes = now.getHours() * 60 + now.getMinutes() - STRIP_START * 60;
@@ -110,10 +114,12 @@ function DayStrip({
             </motion.button>
           );
         })}
-        <div
-          className="pointer-events-none absolute top-0 bottom-0 w-px bg-danger"
-          style={{ left: `${nowPct}%` }}
-        />
+        {showNow && (
+          <div
+            className="pointer-events-none absolute top-0 bottom-0 w-px bg-danger"
+            style={{ left: `${nowPct}%` }}
+          />
+        )}
       </div>
       <div className="mt-2 flex justify-between text-[10px] text-muted">
         {hourTicks
@@ -135,10 +141,37 @@ function DayStrip({
 }
 
 export function TodayAgenda() {
-  const { search, openIssue, openCreate, activePersonaId } = useWorkspace();
-  const issues = useIssues(activePersonaId);
+  const { search } = useSearch();
+  const { openIssue, openCreate, activePersonaId, viewDate } = useWorkspace();
+  const issues = useIssues(activePersonaId, search);
   const persona = getPersona(activePersonaId);
-  const today = startOfDay();
+  const viewDay = startOfDay(viewDate);
+  const viewDayKey = toDateKey(viewDay);
+  const isViewingToday = viewDayKey === toDateKey(startOfDay());
+
+  const { attention, scheduled, meetings, tasks } = useMemo(() => {
+    const filtered = issues ?? [];
+    const overdue = filtered.filter((issue) => isOverdue(issue, viewDayKey));
+    const urgentToday = filtered.filter(
+      (issue) =>
+        !isOverdue(issue, viewDayKey) &&
+        issue.priority === "urgent" &&
+        issue.status !== "done" &&
+        issue.dueDate === viewDayKey,
+    );
+    const attentionItems = [...overdue, ...urgentToday];
+    const scheduledItems = filtered
+      .filter((issue) => isScheduledToday(issue, viewDayKey))
+      .sort((a, b) => (a.startAt ?? "").localeCompare(b.startAt ?? ""));
+    const meetingItems = scheduledItems.filter((issue) => issue.kind === "event");
+    const taskItems = filtered.filter((issue) => isTaskDueToday(issue, viewDayKey));
+    return {
+      attention: attentionItems,
+      scheduled: scheduledItems,
+      meetings: meetingItems,
+      tasks: taskItems,
+    };
+  }, [issues, viewDayKey]);
 
   if (issues === undefined) {
     return (
@@ -148,37 +181,11 @@ export function TodayAgenda() {
     );
   }
 
-  const todayKey = toDateKey(today);
-  const filtered = issues.filter((issue) => {
-    if (!search.trim()) return true;
-    const q = search.toLowerCase();
-    return (
-      issue.title.toLowerCase().includes(q) ||
-      issue.identifier.toLowerCase().includes(q) ||
-      issue.description.toLowerCase().includes(q)
-    );
-  });
-
-  const overdue = filtered.filter((issue) => isOverdue(issue, todayKey));
-  const urgentToday = filtered.filter(
-    (issue) =>
-      !isOverdue(issue, todayKey) &&
-      issue.priority === "urgent" &&
-      issue.status !== "done" &&
-      issue.dueDate === todayKey,
-  );
-  const attention = [...overdue, ...urgentToday];
-  const scheduled = filtered
-    .filter((issue) => isScheduledToday(issue, todayKey))
-    .sort((a, b) => (a.startAt ?? "").localeCompare(b.startAt ?? ""));
-  const meetings = scheduled.filter((issue) => issue.kind === "event");
-  const tasks = filtered.filter((issue) => isTaskDueToday(issue, todayKey));
-
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6 px-6 py-8">
       <motion.div variants={section} initial="hidden" animate="show" custom={0}>
         <p className="text-xs tracking-wide text-muted uppercase">
-          {today.toLocaleDateString(undefined, {
+          {viewDay.toLocaleDateString(undefined, {
             weekday: "long",
             month: "long",
             day: "numeric",
@@ -203,7 +210,11 @@ export function TodayAgenda() {
       </motion.div>
 
       <motion.div variants={section} initial="hidden" animate="show" custom={1}>
-        <DayStrip scheduled={scheduled} onOpen={openIssue} />
+        <ProgressBlock issues={issues} referenceDate={viewDay} />
+      </motion.div>
+
+      <motion.div variants={section} initial="hidden" animate="show" custom={2}>
+        <DayStrip scheduled={scheduled} onOpen={openIssue} showNow={isViewingToday} />
       </motion.div>
 
       {attention.length > 0 && (
@@ -211,7 +222,7 @@ export function TodayAgenda() {
           variants={section}
           initial="hidden"
           animate="show"
-          custom={2}
+          custom={3}
           className="flex flex-col gap-3"
         >
           <div className="flex items-center gap-2">
@@ -232,14 +243,16 @@ export function TodayAgenda() {
         variants={section}
         initial="hidden"
         animate="show"
-        custom={3}
+        custom={4}
         className="flex flex-col gap-3"
       >
-        <h3 className="text-sm font-medium">Today&apos;s schedule</h3>
+        <h3 className="text-sm font-medium">
+          {isViewingToday ? "Today's schedule" : "Schedule"}
+        </h3>
         {scheduled.length === 0 ? (
           <EmptyState
             icon={<IconCalendar className="size-5" />}
-            title="Nothing time-blocked today"
+            title={isViewingToday ? "Nothing time-blocked today" : "Nothing time-blocked"}
             description="Click a calendar slot or create an event to structure your day."
             actionLabel="Block time"
             onAction={() => openCreate({ kind: "event", status: "todo" })}
@@ -290,7 +303,7 @@ export function TodayAgenda() {
         variants={section}
         initial="hidden"
         animate="show"
-        custom={4}
+        custom={5}
         className="flex flex-col gap-3"
       >
         <h3 className="text-sm font-medium">Tasks to complete</h3>
@@ -298,7 +311,11 @@ export function TodayAgenda() {
           <EmptyState
             icon={<IconInbox className="size-5" />}
             title="All clear"
-            description="No open tasks waiting for today. Enjoy the focus time."
+            description={
+              isViewingToday
+                ? "No open tasks waiting for today. Enjoy the focus time."
+                : "No open tasks for this day."
+            }
             actionLabel="New task"
             onAction={() => openCreate({ kind: "task", status: "todo" })}
           />

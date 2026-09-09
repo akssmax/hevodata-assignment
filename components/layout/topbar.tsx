@@ -1,35 +1,58 @@
 "use client";
 
-import { Button, Chip, Kbd, SearchField } from "@heroui/react";
+import { Button, Kbd, SearchField } from "@heroui/react";
 import { usePathname } from "next/navigation";
-import { IconPlus } from "@/components/icons";
-import { useWorkspace } from "@/components/workspace-provider";
+import { IconChevron, IconChevronRight, IconPlus } from "@/components/icons";
+import { useSearch, useWorkspace } from "@/components/workspace-provider";
+import { formatDayLabel, startOfDay, toDateKey } from "@/lib/dates";
 import { getPersona } from "@/lib/personas";
 
 const TITLES: Record<string, string> = {
-  "/": "Today",
   "/board": "Board",
   "/calendar": "Calendar",
   "/issues": "Issues",
 };
 
+function todayTitle(viewDate: Date): string {
+  if (toDateKey(viewDate) === toDateKey(startOfDay())) return "Today";
+  return formatDayLabel(viewDate);
+}
+
 export function Topbar() {
   const pathname = usePathname();
-  const { search, setSearch, activePersonaId, openCreate } = useWorkspace();
+  const { search, setSearch } = useSearch();
+  const { activePersonaId, openCreate, viewDate, goToPreviousDay, goToNextDay } = useWorkspace();
   const persona = getPersona(activePersonaId);
+  const isTodayRoute = pathname === "/";
+  const title = isTodayRoute ? todayTitle(viewDate) : (TITLES[pathname] ?? "Dayline");
 
   return (
     <header className="flex h-12 shrink-0 items-center justify-between gap-4 border-b border-border px-5">
-      <div className="flex items-center gap-2">
-        <h1 className="text-sm font-medium">{TITLES[pathname] ?? "Dayline"}</h1>
-        <Chip
-          size="sm"
-          variant="soft"
-          style={{ color: persona.color, backgroundColor: `${persona.color}1f` }}
-        >
-          {persona.name}
-        </Chip>
-      </div>
+      {isTodayRoute ? (
+        <div className="flex items-center gap-1">
+          <Button
+            isIconOnly
+            aria-label="Previous day"
+            size="sm"
+            variant="ghost"
+            onPress={goToPreviousDay}
+          >
+            <IconChevron className="size-4" />
+          </Button>
+          <h1 className="min-w-[7rem] text-center text-sm font-medium">{title}</h1>
+          <Button
+            isIconOnly
+            aria-label="Next day"
+            size="sm"
+            variant="ghost"
+            onPress={goToNextDay}
+          >
+            <IconChevronRight className="size-4" />
+          </Button>
+        </div>
+      ) : (
+        <h1 className="text-sm font-medium">{title}</h1>
+      )}
       <div className="flex items-center gap-3">
         <SearchField
           aria-label="Search issues"

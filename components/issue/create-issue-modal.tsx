@@ -2,7 +2,7 @@
 
 import { Button, Input, Label, Modal, TextArea, TextField } from "@heroui/react";
 import { useEffect, useState } from "react";
-import { FieldSelect } from "@/components/issue/field-select";
+import { FieldSelect, PriorityOptionIcon, StatusDotIcon } from "@/components/issue/field-select";
 import { DateTimeField, DueDateField } from "@/components/issue/schedule-fields";
 import { useWorkspace } from "@/components/workspace-provider";
 import { PRIORITY_LABELS, STATUS_LABELS } from "@/lib/constants";
@@ -14,6 +14,9 @@ import {
   type Priority,
   type Status,
 } from "@/lib/types";
+
+const STATUS_OPTIONS = STATUSES.map((id) => ({ id, label: STATUS_LABELS[id] }));
+const PRIORITY_OPTIONS = PRIORITIES.map((id) => ({ id, label: PRIORITY_LABELS[id] }));
 
 export function CreateIssueModal() {
   const { createOpen, createDraft, closeCreate, openIssue, activePersonaId } = useWorkspace();
@@ -95,13 +98,15 @@ export function CreateIssueModal() {
               <div className="grid grid-cols-2 gap-3">
                 <FieldSelect
                   label="Status"
-                  options={STATUSES.map((id) => ({ id, label: STATUS_LABELS[id] }))}
+                  options={STATUS_OPTIONS}
+                  renderIcon={(id) => <StatusDotIcon status={id} />}
                   value={status}
                   onChange={setStatus}
                 />
                 <FieldSelect
                   label="Priority"
-                  options={PRIORITIES.map((id) => ({ id, label: PRIORITY_LABELS[id] }))}
+                  options={PRIORITY_OPTIONS}
+                  renderIcon={(id) => <PriorityOptionIcon priority={id} />}
                   value={priority}
                   onChange={setPriority}
                 />

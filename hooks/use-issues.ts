@@ -14,6 +14,13 @@ export function useIssues(ownerId: string | null, query = "") {
   }, [ownerId, query]);
 }
 
+export function useIssue(id: string | null) {
+  return useLiveQuery(async () => {
+    if (!id) return undefined;
+    return db.issues.get(id);
+  }, [id]);
+}
+
 export function groupByStatus(issues: Issue[] | undefined) {
   const groups: Record<Status, Issue[]> = {
     backlog: [],

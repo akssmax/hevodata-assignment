@@ -17,7 +17,7 @@ import {
 } from "@/components/icons";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import { useWorkspace } from "@/components/workspace-provider";
-import { PERSONAS, getPersona } from "@/lib/personas";
+import { PERSONAS, getPersona, personaAvatarStyle } from "@/lib/personas";
 
 const NAV = [
   { href: "/", label: "Today", icon: IconToday },
@@ -95,9 +95,7 @@ function PersonaPopover({ collapsed }: { collapsed: boolean }) {
           }`}
         >
           <Avatar size="sm">
-            <Avatar.Fallback
-              style={{ backgroundColor: `${active.color}33`, color: active.color }}
-            >
+            <Avatar.Fallback style={personaAvatarStyle(active)}>
               {active.initials}
             </Avatar.Fallback>
           </Avatar>
@@ -126,9 +124,7 @@ function PersonaPopover({ collapsed }: { collapsed: boolean }) {
                   }`}
                 >
                   <Avatar size="sm">
-                    <Avatar.Fallback
-                      style={{ backgroundColor: `${persona.color}33`, color: persona.color }}
-                    >
+                    <Avatar.Fallback style={personaAvatarStyle(persona)}>
                       {persona.initials}
                     </Avatar.Fallback>
                   </Avatar>
@@ -164,21 +160,23 @@ export function Sidebar() {
       transition={{ type: "spring", stiffness: 400, damping: 38 }}
       className="flex h-full shrink-0 flex-col overflow-hidden border-r border-border bg-surface/40"
     >
-      <div className={`flex items-center gap-2.5 px-4 py-4 ${sidebarCollapsed ? "justify-center px-2" : ""}`}>
-        <Logo />
-        <AnimatePresence initial={false}>
-          {!sidebarCollapsed && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.15 }}
-            >
-              <p className="text-sm font-semibold tracking-tight">Dayline</p>
-              <p className="text-[11px] text-muted">Personal workspace</p>
-            </motion.div>
-          )}
-        </AnimatePresence>
+      <div className={`px-4 py-4 ${sidebarCollapsed ? "flex justify-center px-2" : ""}`}>
+        <div className={sidebarCollapsed ? "" : "flex flex-col gap-0.5"}>
+          <Logo collapsed={sidebarCollapsed} />
+          <AnimatePresence initial={false}>
+            {!sidebarCollapsed && (
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
+                className="text-[11px] text-muted"
+              >
+                Personal workspace
+              </motion.p>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
 
       <div className={`px-3 pb-3 ${sidebarCollapsed ? "flex justify-center px-2" : ""}`}>

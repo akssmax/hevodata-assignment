@@ -49,35 +49,41 @@ export function IconSwatch({ className }: IconProps) {
   return <SwatchIcon aria-hidden className={className} />;
 }
 
-/** Dayline logo: a sun rising over a horizon line. Sun lifts on hover. */
-export function Logo({ className }: { className?: string }) {
+/** Dayline wordmark for sidebar header. */
+export function Logo({
+  collapsed,
+  className,
+}: {
+  collapsed?: boolean;
+  className?: string;
+}) {
+  const hover = { scale: collapsed ? 1.04 : 1.01 };
+  const transition = { type: "spring" as const, stiffness: 400, damping: 25 };
+
+  if (collapsed) {
+    return (
+      <motion.span
+        whileHover={hover}
+        transition={transition}
+        aria-label="Dayline"
+        className={`inline-flex shrink-0 cursor-default items-baseline text-[15px] font-semibold leading-none tracking-tight ${className ?? ""}`}
+      >
+        <span className="text-accent">d</span>
+        <span className="text-accent/75">.</span>
+      </motion.span>
+    );
+  }
+
   return (
-    <motion.div
-      whileHover="hover"
-      initial="rest"
-      animate="rest"
-      className={`flex size-7 shrink-0 cursor-default items-center justify-center rounded-md bg-accent ${className ?? ""}`}
+    <motion.span
+      whileHover={hover}
+      transition={transition}
+      aria-label="Dayline"
+      className={`inline-flex shrink-0 cursor-default text-sm font-semibold leading-none tracking-tight ${className ?? ""}`}
     >
-      <svg viewBox="0 0 20 20" className="size-4 text-accent-foreground" fill="none">
-        <motion.circle
-          cx="10"
-          cy="11"
-          r="4"
-          fill="currentColor"
-          variants={{ rest: { y: 2.5 }, hover: { y: -1 } }}
-          transition={{ type: "spring", stiffness: 300, damping: 18 }}
-        />
-        <motion.rect
-          x="3"
-          y="13.5"
-          height="1.6"
-          rx="0.8"
-          fill="currentColor"
-          variants={{ rest: { width: 9, x: 5.5 }, hover: { width: 14, x: 3 } }}
-          transition={{ type: "spring", stiffness: 300, damping: 20 }}
-        />
-      </svg>
-    </motion.div>
+      <span className="text-foreground">day</span>
+      <span className="text-accent">line</span>
+    </motion.span>
   );
 }
 

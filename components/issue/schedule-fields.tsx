@@ -116,9 +116,10 @@ export function DateTimeField({
           </Button>
         )}
       </div>
-      <div className="grid grid-cols-[1fr_auto] gap-2">
+      <div className="flex items-center gap-2">
         <DatePicker
           aria-label={`${label} date`}
+          className="w-40"
           value={day}
           onChange={(next) => onChange(combineIso(next, time ?? new Time(9, 0)))}
         >
@@ -138,6 +139,7 @@ export function DateTimeField({
         </DatePicker>
         <TimeField
           aria-label={`${label} time`}
+          className="w-24"
           value={time}
           onChange={(next) => {
             if (!next) return;

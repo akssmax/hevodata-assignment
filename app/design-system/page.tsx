@@ -25,7 +25,7 @@ import {
 } from "@/components/icons";
 import { StatusChip } from "@/components/issue/status-chip";
 import { PRIORITY_LABELS, STATUS_DOT, STATUS_LABELS } from "@/lib/constants";
-import { PERSONAS } from "@/lib/personas";
+import { PERSONAS, personaAvatarStyle } from "@/lib/personas";
 import { PRIORITIES, STATUSES } from "@/lib/types";
 
 const ACCENT_SCALE: { step: number; className: string }[] = [
@@ -201,9 +201,7 @@ export default function DesignSystemPage() {
           {PERSONAS.map((persona) => (
             <div key={persona.id} className="flex items-center gap-3">
               <Avatar>
-                <Avatar.Fallback
-                  style={{ backgroundColor: `${persona.color}33`, color: persona.color }}
-                >
+                <Avatar.Fallback style={personaAvatarStyle(persona)}>
                   {persona.initials}
                 </Avatar.Fallback>
               </Avatar>

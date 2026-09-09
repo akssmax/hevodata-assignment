@@ -15,9 +15,9 @@ import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-
 import { CSS } from "@dnd-kit/utilities";
 import { Chip, Spinner } from "@heroui/react";
 import { AnimatePresence, motion } from "framer-motion";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { IssueCard } from "@/components/issue/issue-card";
-import { useWorkspace } from "@/components/workspace-provider";
+import { useSearch, useWorkspace } from "@/components/workspace-provider";
 import { groupByStatus, useIssues } from "@/hooks/use-issues";
 import { STATUS_DOT, STATUS_LABELS } from "@/lib/constants";
 import { moveIssue } from "@/lib/issue-service";
@@ -57,11 +57,12 @@ function Column({
     id: status,
     data: { type: "column", status },
   });
+  const itemIds = useMemo(() => issues.map((issue) => issue.id), [issues]);
 
   return (
     <section
       className={`flex w-72 shrink-0 flex-col rounded-xl p-3 transition-colors ${
-        isOver ? "bg-accent/10" : "bg-surface/40"
+        isOver ? "bg-accent/10" : "bg-default/40"
       }`}
     >
       <div className="mb-3 flex items-center justify-between px-1">
@@ -87,7 +88,7 @@ function Column({
         </AnimatePresence>
       </div>
       <div ref={setNodeRef} className="flex min-h-24 flex-1 flex-col gap-2">
-        <SortableContext items={issues.map((issue) => issue.id)} strategy={verticalListSortingStrategy}>
+        <SortableContext items={itemIds} strategy={verticalListSortingStrategy}>
           {issues.map((issue) => (
             <SortableIssue key={issue.id} issue={issue} onOpen={onOpen} />
           ))}
@@ -107,9 +108,10 @@ function Column({
 }
 
 export function KanbanBoard() {
-  const { search, openIssue, activePersonaId } = useWorkspace();
+  const { search } = useSearch();
+  const { openIssue, activePersonaId } = useWorkspace();
   const issues = useIssues(activePersonaId, search);
-  const grouped = groupByStatus(issues);
+  const grouped = useMemo(() => groupByStatus(issues), [issues]);
   const [active, setActive] = useState<Issue | null>(null);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 

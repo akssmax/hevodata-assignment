@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useMemo, useState } from "react";
 import { EmptyState } from "@/components/empty-state";
 import { IconCalendar, IconChevron, IconChevronRight } from "@/components/icons";
-import { useWorkspace } from "@/components/workspace-provider";
+import { useSearch, useWorkspace } from "@/components/workspace-provider";
 import { useIssues } from "@/hooks/use-issues";
 import { CALENDAR_END_HOUR, CALENDAR_START_HOUR, HOUR_HEIGHT } from "@/lib/constants";
 import {
@@ -35,11 +35,23 @@ function blockStyle(issue: Issue) {
 }
 
 export function WeekCalendar() {
-  const { search, openIssue, openCreate, activePersonaId } = useWorkspace();
+  const { search } = useSearch();
+  const { openIssue, openCreate, activePersonaId } = useWorkspace();
   const issues = useIssues(activePersonaId, search);
   const [weekStart, setWeekStart] = useState(() => startOfWeek());
   const days = useMemo(() => Array.from({ length: 7 }, (_, index) => addDays(weekStart, index)), [weekStart]);
   const todayKey = toDateKey(new Date());
+  const issuesByDay = useMemo(() => {
+    const map = new Map<string, Issue[]>();
+    for (const issue of issues ?? []) {
+      if (!issue.startAt) continue;
+      const key = toDateKey(new Date(issue.startAt));
+      const list = map.get(key) ?? [];
+      list.push(issue);
+      map.set(key, list);
+    }
+    return map;
+  }, [issues]);
 
   if (issues === undefined) {
     return (
@@ -137,9 +149,7 @@ export function WeekCalendar() {
             </div>
 
             {days.map((day) => {
-              const dayIssues = (issues ?? []).filter(
-                (issue) => issue.startAt && isSameDay(issue.startAt, day),
-              );
+              const dayIssues = issuesByDay.get(toDateKey(day)) ?? [];
               return (
                 <div
                   key={toDateKey(day)}

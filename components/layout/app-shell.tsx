@@ -1,14 +1,21 @@
 "use client";
 
 import { Spinner } from "@heroui/react";
-import { CreateIssueModal } from "@/components/issue/create-issue-modal";
-import { IssueDrawer } from "@/components/issue/issue-drawer";
+import dynamic from "next/dynamic";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { WorkspaceProvider, useWorkspace } from "@/components/workspace-provider";
 
+const CreateIssueModal = dynamic(() =>
+  import("@/components/issue/create-issue-modal").then((m) => ({ default: m.CreateIssueModal })),
+);
+
+const IssueDrawer = dynamic(() =>
+  import("@/components/issue/issue-drawer").then((m) => ({ default: m.IssueDrawer })),
+);
+
 function ShellFrame({ children }: { children: React.ReactNode }) {
-  const { ready } = useWorkspace();
+  const { ready, createOpen } = useWorkspace();
 
   return (
     <div className="flex h-screen overflow-hidden bg-background text-foreground">
@@ -25,7 +32,7 @@ function ShellFrame({ children }: { children: React.ReactNode }) {
           )}
         </main>
       </div>
-      <CreateIssueModal />
+      {createOpen && <CreateIssueModal />}
       <IssueDrawer />
     </div>
   );
