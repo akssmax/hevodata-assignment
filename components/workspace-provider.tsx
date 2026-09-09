@@ -1,7 +1,6 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { addDays, parseDateKey, startOfDay, toDateKey } from "@/lib/dates";
 import { DEFAULT_PERSONA_ID } from "@/lib/personas";
 import { ensureSeeded } from "@/lib/seed";
 import type { IssueKind, Status } from "@/lib/types";
@@ -25,10 +24,6 @@ interface WorkspaceContextValue {
   setActivePersona: (id: string) => void;
   sidebarCollapsed: boolean;
   toggleSidebar: () => void;
-  viewDate: Date;
-  setViewDate: (date: Date) => void;
-  goToPreviousDay: () => void;
-  goToNextDay: () => void;
   createOpen: boolean;
   createDraft: CreateDraft;
   openCreate: (draft?: CreateDraft) => void;
@@ -43,8 +38,6 @@ const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
 
 const PERSONA_KEY = "dayline:persona";
 const SIDEBAR_KEY = "dayline:sidebar-collapsed";
-const VIEW_DATE_KEY = "dayline:view-date";
-
 export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
   const [activePersonaId, setActivePersonaId] = useState(DEFAULT_PERSONA_ID);
@@ -53,20 +46,11 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [createOpen, setCreateOpen] = useState(false);
   const [createDraft, setCreateDraft] = useState<CreateDraft>({});
   const [selectedIssueId, setSelectedIssueId] = useState<string | null>(null);
-  const [viewDate, setViewDateState] = useState(() => startOfDay());
 
   useEffect(() => {
     const savedPersona = window.localStorage.getItem(PERSONA_KEY);
     if (savedPersona) setActivePersonaId(savedPersona);
     setSidebarCollapsed(window.localStorage.getItem(SIDEBAR_KEY) === "true");
-    const savedViewDate = window.localStorage.getItem(VIEW_DATE_KEY);
-    if (savedViewDate) {
-      try {
-        setViewDateState(startOfDay(parseDateKey(savedViewDate)));
-      } catch {
-        // ignore invalid persisted date
-      }
-    }
     ensureSeeded().finally(() => setReady(true));
   }, []);
 
@@ -103,28 +87,6 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     setSelectedIssueId(null);
   }, []);
 
-  const setViewDate = useCallback((date: Date) => {
-    const normalized = startOfDay(date);
-    setViewDateState(normalized);
-    window.localStorage.setItem(VIEW_DATE_KEY, toDateKey(normalized));
-  }, []);
-
-  const goToPreviousDay = useCallback(() => {
-    setViewDateState((prev) => {
-      const next = startOfDay(addDays(prev, -1));
-      window.localStorage.setItem(VIEW_DATE_KEY, toDateKey(next));
-      return next;
-    });
-  }, []);
-
-  const goToNextDay = useCallback(() => {
-    setViewDateState((prev) => {
-      const next = startOfDay(addDays(prev, 1));
-      window.localStorage.setItem(VIEW_DATE_KEY, toDateKey(next));
-      return next;
-    });
-  }, []);
-
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
       const target = event.target as HTMLElement | null;
@@ -158,10 +120,6 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       setActivePersona,
       sidebarCollapsed,
       toggleSidebar,
-      viewDate,
-      setViewDate,
-      goToPreviousDay,
-      goToNextDay,
       createOpen,
       createDraft,
       openCreate,
@@ -176,10 +134,6 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       setActivePersona,
       sidebarCollapsed,
       toggleSidebar,
-      viewDate,
-      setViewDate,
-      goToPreviousDay,
-      goToNextDay,
       createOpen,
       createDraft,
       openCreate,

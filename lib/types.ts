@@ -7,6 +7,9 @@ export type Priority = (typeof PRIORITIES)[number];
 export const KINDS = ["task", "event"] as const;
 export type IssueKind = (typeof KINDS)[number];
 
+export const MEETING_PLATFORMS = ["google_meet", "microsoft_teams"] as const;
+export type MeetingPlatform = (typeof MEETING_PLATFORMS)[number];
+
 export interface Comment {
   id: string;
   authorId: string;
@@ -36,6 +39,8 @@ export interface Issue {
   dueDate?: string;
   startAt?: string;
   endAt?: string;
+  meetingPlatform?: MeetingPlatform;
+  meetingUrl?: string;
   comments: Comment[];
   attachments: Attachment[];
   createdAt: string;
@@ -57,6 +62,8 @@ export interface CreateIssueInput {
   dueDate?: string;
   startAt?: string;
   endAt?: string;
+  meetingPlatform?: MeetingPlatform;
+  meetingUrl?: string;
 }
 
 export interface UpdateIssueInput {
@@ -69,4 +76,6 @@ export interface UpdateIssueInput {
   dueDate?: string | null;
   startAt?: string | null;
   endAt?: string | null;
+  meetingPlatform?: MeetingPlatform | null;
+  meetingUrl?: string | null;
 }

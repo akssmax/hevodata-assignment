@@ -108,7 +108,7 @@ function Swatch({
         style={style}
       />
       <span className="text-xs font-medium">{name}</span>
-      <span className="font-mono text-[10px] text-muted">{copied ? "Copied!" : token}</span>
+      <span className="font-mono text-xs text-muted">{copied ? "Copied!" : token}</span>
     </button>
   );
 }
@@ -207,7 +207,7 @@ export default function DesignSystemPage() {
               </Avatar>
               <div>
                 <p className="text-sm font-medium">{persona.name}</p>
-                <p className="font-mono text-[10px] text-muted">{persona.color}</p>
+                <p className="font-mono text-xs text-muted">{persona.color}</p>
               </div>
             </div>
           ))}
@@ -221,7 +221,7 @@ export default function DesignSystemPage() {
           <p className="text-sm font-medium">Title / sm medium</p>
           <p className="text-sm">Body / sm regular — the quick brown fox jumps over the lazy dog.</p>
           <p className="text-xs text-muted">Caption / xs muted — supporting metadata and hints.</p>
-          <p className="font-mono text-[11px] text-muted">DAY-101 / mono identifier</p>
+          <p className="font-mono text-xs text-muted">DAY-101 / mono identifier</p>
         </div>
       </Section>
 

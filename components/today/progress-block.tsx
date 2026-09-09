@@ -25,10 +25,10 @@ function StatCell({
     <div className="flex min-w-0 flex-col gap-1">
       <div className="flex items-center gap-1.5 text-muted">
         {icon}
-        <span className="truncate text-[10px] font-medium tracking-wide uppercase">{label}</span>
+        <span className="truncate text-xs font-medium tracking-wide uppercase">{label}</span>
       </div>
       <p className="text-xl font-semibold tabular-nums tracking-tight">{value}</p>
-      {hint && <div className="text-[11px] text-muted">{hint}</div>}
+      {hint && <div className="text-xs text-muted">{hint}</div>}
     </div>
   );
 }

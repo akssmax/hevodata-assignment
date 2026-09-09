@@ -102,7 +102,7 @@ function PersonaPopover({ collapsed }: { collapsed: boolean }) {
           {!collapsed && (
             <div className="min-w-0">
               <p className="truncate text-[13px] font-medium">{active.name}</p>
-              <p className="truncate text-[11px] text-muted">{active.role}</p>
+              <p className="truncate text-xs text-muted">{active.role}</p>
             </div>
           )}
         </div>
@@ -130,7 +130,7 @@ function PersonaPopover({ collapsed }: { collapsed: boolean }) {
                   </Avatar>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-[13px] font-medium">{persona.name}</p>
-                    <p className="truncate text-[11px] text-muted">{persona.role}</p>
+                    <p className="truncate text-xs text-muted">{persona.role}</p>
                   </div>
                   {isActive && (
                     <span className="size-2 rounded-full" style={{ backgroundColor: persona.color }} />
@@ -140,7 +140,7 @@ function PersonaPopover({ collapsed }: { collapsed: boolean }) {
             })}
           </div>
           <Separator className="my-3" />
-          <p className="mb-1.5 text-[11px] font-medium tracking-wide text-muted uppercase">
+          <p className="mb-1.5 text-xs font-medium tracking-wide text-muted uppercase">
             Theme
           </p>
           <ThemeSwitcher />
@@ -170,7 +170,7 @@ export function Sidebar() {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.15 }}
-                className="text-[11px] text-muted"
+                className="text-xs text-muted"
               >
                 Personal workspace
               </motion.p>
@@ -229,7 +229,7 @@ export function Sidebar() {
           </Tooltip>
         ) : (
           <div className="flex items-center justify-between px-2">
-            <p className="text-[11px] text-muted">
+            <p className="text-xs text-muted">
               Press <span className="font-mono text-foreground/80">C</span> to create
             </p>
             <Button

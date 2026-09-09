@@ -53,6 +53,8 @@ export async function createIssue(input: CreateIssueInput): Promise<Issue> {
     dueDate: input.dueDate,
     startAt: schedule.startAt,
     endAt: schedule.endAt,
+    meetingPlatform: input.meetingPlatform,
+    meetingUrl: input.meetingUrl,
     comments: [],
     attachments: [],
     createdAt,
@@ -94,6 +96,18 @@ export async function updateIssue(id: string, patch: UpdateIssueInput): Promise<
     delete next.endAt;
   } else if (patch.endAt !== undefined) {
     next.endAt = patch.endAt;
+  }
+
+  if (patch.meetingPlatform === null) {
+    delete next.meetingPlatform;
+  } else if (patch.meetingPlatform !== undefined) {
+    next.meetingPlatform = patch.meetingPlatform;
+  }
+
+  if (patch.meetingUrl === null) {
+    delete next.meetingUrl;
+  } else if (patch.meetingUrl !== undefined) {
+    next.meetingUrl = patch.meetingUrl;
   }
 
   // Edge case: keep end after start when either side changes

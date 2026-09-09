@@ -140,7 +140,7 @@ export function WeekCalendar() {
               {HOURS.map((hour) => (
                 <div
                   key={hour}
-                  className="pr-2 text-right text-[11px] text-muted"
+                  className="pr-2 text-right text-xs text-muted"
                   style={{ height: HOUR_HEIGHT }}
                 >
                   {hour}:00
@@ -185,8 +185,8 @@ export function WeekCalendar() {
                           openIssue(issue.id);
                         }}
                       >
-                        <p className="truncate text-[11px] font-medium">{issue.title}</p>
-                        <p className="truncate text-[10px] text-muted">
+                        <p className="truncate text-xs font-medium">{issue.title}</p>
+                        <p className="truncate text-xs text-muted">
                           {formatTimeRange(issue.startAt, issue.endAt)}
                         </p>
                       </motion.button>

@@ -10,6 +10,7 @@ import {
   useSensors,
   type DragEndEvent,
   type DragStartEvent,
+  type Over,
 } from "@dnd-kit/core";
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -23,6 +24,20 @@ import { STATUS_DOT, STATUS_LABELS } from "@/lib/constants";
 import { moveIssue } from "@/lib/issue-service";
 import { STATUSES, type Issue, type Status } from "@/lib/types";
 
+function resolveOverStatus(over: Over, issues: Issue[]): Status | null {
+  const data = over.data.current;
+  if (data?.type === "column" && STATUSES.includes(data.status as Status)) {
+    return data.status as Status;
+  }
+  if (data?.type === "issue") {
+    return (data.issue as Issue).status;
+  }
+  const issue = issues.find((item) => item.id === over.id);
+  if (issue) return issue.status;
+  if (STATUSES.includes(over.id as Status)) return over.id as Status;
+  return null;
+}
+
 function SortableIssue({ issue, onOpen }: { issue: Issue; onOpen: (id: string) => void }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: issue.id,
@@ -30,17 +45,15 @@ function SortableIssue({ issue, onOpen }: { issue: Issue; onOpen: (id: string) =
   });
 
   return (
-    <motion.div
+    <div
       ref={setNodeRef}
-      layout
-      style={{ transform: CSS.Transform.toString(transform), transition }}
+      style={{ transform: CSS.Transform.toString(transform), transition, touchAction: "none" }}
       className={isDragging ? "opacity-40" : undefined}
-      transition={{ type: "spring", stiffness: 500, damping: 40 }}
       {...attributes}
       {...listeners}
     >
-      <IssueCard issue={issue} onOpen={onOpen} />
-    </motion.div>
+      <IssueCard issue={issue} onOpen={isDragging ? () => undefined : onOpen} />
+    </div>
   );
 }
 
@@ -61,6 +74,7 @@ function Column({
 
   return (
     <section
+      ref={setNodeRef}
       className={`flex w-72 shrink-0 flex-col rounded-xl p-3 transition-colors ${
         isOver ? "bg-accent/10" : "bg-default/40"
       }`}
@@ -87,7 +101,7 @@ function Column({
           </motion.span>
         </AnimatePresence>
       </div>
-      <div ref={setNodeRef} className="flex min-h-24 flex-1 flex-col gap-2">
+      <div className="flex min-h-24 flex-1 flex-col gap-2">
         <SortableContext items={itemIds} strategy={verticalListSortingStrategy}>
           {issues.map((issue) => (
             <SortableIssue key={issue.id} issue={issue} onOpen={onOpen} />
@@ -95,7 +109,7 @@ function Column({
         </SortableContext>
         {issues.length === 0 && (
           <div
-            className={`flex flex-1 items-center justify-center rounded-lg border border-dashed px-3 py-6 text-center text-[11px] transition-colors ${
+            className={`flex flex-1 items-center justify-center rounded-lg border border-dashed px-3 py-6 text-center text-xs transition-colors ${
               isOver ? "border-accent/50 text-accent" : "border-border text-muted"
             }`}
           >
@@ -131,32 +145,31 @@ export function KanbanBoard() {
   async function onDragEnd(event: DragEndEvent) {
     setActive(null);
     const { active: dragged, over } = event;
-    if (!over || !issues) return;
+    if (!over || !issues || dragged.id === over.id) return;
 
     const current = issues.find((issue) => issue.id === dragged.id);
     if (!current) return;
 
-    const overIssue = issues.find((issue) => issue.id === over.id);
-    const overStatus = (overIssue?.status ?? over.id) as Status;
-    if (!STATUSES.includes(overStatus)) return;
+    const overStatus = resolveOverStatus(over, issues);
+    if (!overStatus) return;
 
-    const column = grouped[overStatus].filter((issue) => issue.id !== current.id);
-    let before: string | undefined;
-    let after: string | undefined;
+    const overIssue = issues.find((issue) => issue.id === over.id);
+    const targetColumn = grouped[overStatus].filter((issue) => issue.id !== current.id);
+
+    let beforeRank: string | undefined;
+    let afterRank: string | undefined;
 
     if (overIssue && overIssue.id !== current.id) {
-      const index = column.findIndex((issue) => issue.id === overIssue.id);
-      after = column[index]?.rank;
-      before = column[index - 1]?.rank;
+      const index = targetColumn.findIndex((issue) => issue.id === overIssue.id);
+      beforeRank = targetColumn[index - 1]?.rank;
+      afterRank = overIssue.rank;
     } else {
-      before = column[column.length - 1]?.rank;
+      beforeRank = targetColumn[targetColumn.length - 1]?.rank;
     }
 
-    if (current.status === overStatus && current.rank === (after ?? current.rank) && !overIssue) {
-      return;
-    }
+    if (current.status === overStatus && overIssue?.id === current.id) return;
 
-    await moveIssue(current.id, overStatus, before, after);
+    await moveIssue(current.id, overStatus, beforeRank, afterRank);
   }
 
   return (

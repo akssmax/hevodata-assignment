@@ -1,7 +1,7 @@
 import { atLocalTime, dateKeyOffset } from "./dates";
 import { db } from "./db";
 import { PERSONAS } from "./personas";
-import type { Issue, IssueKind, Priority, Status } from "./types";
+import type { Issue, IssueKind, MeetingPlatform, Priority, Status } from "./types";
 
 interface SeedIssue {
   title: string;
@@ -13,6 +13,8 @@ interface SeedIssue {
   dueOffset?: number;
   start?: [dayOffset: number, hour: number, minute?: number];
   end?: [dayOffset: number, hour: number, minute?: number];
+  meetingPlatform?: MeetingPlatform;
+  meetingUrl?: string;
 }
 
 const SEEDS: Record<string, SeedIssue[]> = {
@@ -26,6 +28,8 @@ const SEEDS: Record<string, SeedIssue[]> = {
       rank: "1000",
       start: [0, 9, 30],
       end: [0, 10, 0],
+      meetingPlatform: "google_meet",
+      meetingUrl: "https://meet.google.com/abc-defg-hij",
     },
     {
       title: "Review Priya's PR: board drag state",
@@ -56,6 +60,9 @@ const SEEDS: Record<string, SeedIssue[]> = {
       rank: "4000",
       start: [0, 15, 0],
       end: [0, 15, 30],
+      meetingPlatform: "microsoft_teams",
+      meetingUrl:
+        "https://teams.microsoft.com/l/meetup-join/19%3ameeting_arjun1on1%40thread.v2/0?context=%7b%22Tid%22%3a%22dayline%22%7d",
     },
     {
       title: "Fix overdue: timezone bug in seed data",
@@ -75,6 +82,8 @@ const SEEDS: Record<string, SeedIssue[]> = {
       rank: "6000",
       start: [1, 10, 0],
       end: [1, 11, 30],
+      meetingPlatform: "google_meet",
+      meetingUrl: "https://meet.google.com/xyz-abcd-efg",
     },
     {
       title: "Triage new bug reports",
@@ -122,6 +131,8 @@ const SEEDS: Record<string, SeedIssue[]> = {
       rank: "1000",
       start: [0, 10, 0],
       end: [0, 11, 0],
+      meetingPlatform: "google_meet",
+      meetingUrl: "https://meet.google.com/mya-crit-001",
     },
     {
       title: "Synthesize user interviews",
@@ -141,6 +152,9 @@ const SEEDS: Record<string, SeedIssue[]> = {
       rank: "3000",
       start: [0, 12, 30],
       end: [0, 13, 0],
+      meetingPlatform: "microsoft_teams",
+      meetingUrl:
+        "https://teams.microsoft.com/l/meetup-join/19%3ameeting_wireframe%40thread.v2/0?context=%7b%22Tid%22%3a%22dayline%22%7d",
     },
     {
       title: "Overdue: update journey map",
@@ -179,6 +193,9 @@ const SEEDS: Record<string, SeedIssue[]> = {
       rank: "7000",
       start: [2, 16, 0],
       end: [2, 17, 0],
+      meetingPlatform: "microsoft_teams",
+      meetingUrl:
+        "https://teams.microsoft.com/l/meetup-join/19%3ameeting_designsync%40thread.v2/0?context=%7b%22Tid%22%3a%22dayline%22%7d",
     },
     {
       title: "Explore Linear's command menu",
@@ -209,6 +226,8 @@ const SEEDS: Record<string, SeedIssue[]> = {
       rank: "1000",
       start: [0, 9, 0],
       end: [0, 9, 30],
+      meetingPlatform: "google_meet",
+      meetingUrl: "https://meet.google.com/kav-screen-001",
     },
     {
       title: "Panel interview: senior designer",
@@ -220,6 +239,9 @@ const SEEDS: Record<string, SeedIssue[]> = {
       start: [0, 11, 0],
       end: [0, 12, 0],
       dueOffset: 0,
+      meetingPlatform: "microsoft_teams",
+      meetingUrl:
+        "https://teams.microsoft.com/l/meetup-join/19%3ameeting_panel%40thread.v2/0?context=%7b%22Tid%22%3a%22dayline%22%7d",
     },
     {
       title: "Send offer letter: backend role",
@@ -239,6 +261,9 @@ const SEEDS: Record<string, SeedIssue[]> = {
       rank: "4000",
       start: [0, 14, 0],
       end: [0, 15, 0],
+      meetingPlatform: "microsoft_teams",
+      meetingUrl:
+        "https://teams.microsoft.com/l/meetup-join/19%3ameeting_onboard%40thread.v2/0?context=%7b%22Tid%22%3a%22dayline%22%7d",
     },
     {
       title: "Update leave policy doc",
@@ -258,6 +283,8 @@ const SEEDS: Record<string, SeedIssue[]> = {
       rank: "6000",
       start: [1, 16, 0],
       end: [1, 16, 30],
+      meetingPlatform: "google_meet",
+      meetingUrl: "https://meet.google.com/kav-arjun-1on1",
     },
     {
       title: "Review interview scorecards",
@@ -302,6 +329,8 @@ function toIssue(ownerId: string, index: number, seed: SeedIssue, createdAt: str
     dueDate: seed.dueOffset !== undefined ? dateKeyOffset(seed.dueOffset) : undefined,
     startAt: seed.start ? atLocalTime(seed.start[0], seed.start[1], seed.start[2] ?? 0) : undefined,
     endAt: seed.end ? atLocalTime(seed.end[0], seed.end[1], seed.end[2] ?? 0) : undefined,
+    meetingPlatform: seed.meetingPlatform,
+    meetingUrl: seed.meetingUrl,
     comments: [],
     attachments: [],
     createdAt,

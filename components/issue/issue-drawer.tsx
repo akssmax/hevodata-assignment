@@ -15,6 +15,7 @@ import {
 import { motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { IconCalendar, IconPlus } from "@/components/icons";
+import { MeetingJoinLink } from "@/components/issue/meeting-join";
 import { FieldSelect, PriorityOptionIcon, StatusDotIcon } from "@/components/issue/field-select";
 import { DateTimeField, DueDateField } from "@/components/issue/schedule-fields";
 import { useWorkspace } from "@/components/workspace-provider";
@@ -66,7 +67,7 @@ function readFile(file: File): Promise<{ name: string; size: number; type: strin
 function PropertyRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <p className="text-[11px] font-medium tracking-wide text-muted uppercase">{label}</p>
+      <p className="text-xs font-medium tracking-wide text-muted uppercase">{label}</p>
       {children}
     </div>
   );
@@ -94,7 +95,7 @@ function AttachmentsSection({ issue }: { issue: Issue }) {
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <p className="text-[11px] font-medium tracking-wide text-muted uppercase">
+        <p className="text-xs font-medium tracking-wide text-muted uppercase">
           Attachments {attachments.length > 0 && `(${attachments.length})`}
         </p>
         <Button
@@ -139,7 +140,7 @@ function AttachmentsSection({ issue }: { issue: Issue }) {
                   src={attachment.dataUrl}
                 />
               ) : (
-                <div className="flex size-8 shrink-0 items-center justify-center rounded bg-accent/15 text-[10px] font-semibold text-accent">
+                <div className="flex size-8 shrink-0 items-center justify-center rounded bg-accent/15 text-xs font-semibold text-accent">
                   {attachment.name.split(".").pop()?.slice(0, 4).toUpperCase()}
                 </div>
               )}
@@ -151,7 +152,7 @@ function AttachmentsSection({ issue }: { issue: Issue }) {
                 >
                   {attachment.name}
                 </a>
-                <p className="text-[10px] text-muted">{formatBytes(attachment.size)}</p>
+                <p className="text-xs text-muted">{formatBytes(attachment.size)}</p>
               </div>
               <Button
                 isIconOnly
@@ -184,7 +185,7 @@ function CommentsSection({ issue }: { issue: Issue }) {
 
   return (
     <div className="flex flex-col gap-3">
-      <p className="text-[11px] font-medium tracking-wide text-muted uppercase">
+      <p className="text-xs font-medium tracking-wide text-muted uppercase">
         Comments {comments.length > 0 && `(${comments.length})`}
       </p>
       {comments.length > 0 && (
@@ -206,10 +207,10 @@ function CommentsSection({ issue }: { issue: Issue }) {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-baseline gap-2">
                     <p className="text-xs font-medium">{author.name}</p>
-                    <p className="text-[10px] text-muted">{formatRelative(comment.createdAt)}</p>
+                    <p className="text-xs text-muted">{formatRelative(comment.createdAt)}</p>
                     <button
                       type="button"
-                      className="ml-auto text-[10px] text-muted opacity-0 transition-opacity group-hover:opacity-100 hover:text-danger"
+                      className="ml-auto text-xs text-muted opacity-0 transition-opacity group-hover:opacity-100 hover:text-danger"
                       onClick={() => deleteComment(issue.id, comment.id)}
                     >
                       Delete
@@ -246,7 +247,7 @@ function CommentsSection({ issue }: { issue: Issue }) {
           />
           {draft.trim() && (
             <div className="flex items-center justify-end gap-2">
-              <span className="text-[10px] text-muted">⌘↵ to send</span>
+              <span className="text-xs text-muted">⌘↵ to send</span>
               <Button size="sm" onPress={() => void submit()}>
                 Comment
               </Button>
@@ -376,7 +377,7 @@ export function IssueDrawer() {
                         </Avatar>
                         <div className="min-w-0">
                           <p className="truncate text-xs font-medium">{owner!.name}</p>
-                          <p className="truncate text-[10px] text-muted">{owner!.role}</p>
+                          <p className="truncate text-xs text-muted">{owner!.role}</p>
                         </div>
                       </div>
                     </PropertyRow>
@@ -393,7 +394,7 @@ export function IssueDrawer() {
                   </div>
 
                   <div className="flex flex-col gap-3">
-                    <p className="text-[11px] font-medium tracking-wide text-muted uppercase">
+                    <p className="text-xs font-medium tracking-wide text-muted uppercase">
                       Schedule {timeRange && <span className="text-accent normal-case">· {timeRange}</span>}
                     </p>
                     <DateTimeField
@@ -412,6 +413,11 @@ export function IssueDrawer() {
                         persist({ endAt: next });
                       }}
                     />
+                    {issue.kind === "event" && issue.meetingUrl && (
+                      <div className="pt-1">
+                        <MeetingJoinLink issue={issue} variant="inline" />
+                      </div>
+                    )}
                   </div>
 
                   <Separator />
@@ -422,7 +428,7 @@ export function IssueDrawer() {
 
                   <CommentsSection issue={issue} />
 
-                  <p className="text-[10px] text-muted">
+                  <p className="text-xs text-muted">
                     Created {formatRelative(issue.createdAt)} · Updated {formatRelative(issue.updatedAt)}
                   </p>
                 </>

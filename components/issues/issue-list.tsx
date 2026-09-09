@@ -41,7 +41,7 @@ const columns: LegacyColumnDef<Issue>[] = [
     accessorKey: "identifier",
     header: "ID",
     cell: ({ getValue }) => (
-      <span className="font-mono text-[11px] text-muted">{getValue<string>()}</span>
+      <span className="font-mono text-xs text-muted">{getValue<string>()}</span>
     ),
     size: 72,
   },
@@ -68,7 +68,7 @@ const columns: LegacyColumnDef<Issue>[] = [
           {time}
         </Chip>
       ) : (
-        <span className="text-[11px] text-muted">—</span>
+        <span className="text-xs text-muted">—</span>
       );
     },
     size: 150,
@@ -79,7 +79,7 @@ const columns: LegacyColumnDef<Issue>[] = [
     header: "Due",
     cell: ({ row }) => {
       const due = row.original.dueDate;
-      if (!due) return <span className="text-[11px] text-muted">—</span>;
+      if (!due) return <span className="text-xs text-muted">—</span>;
       const overdue = due < toDateKey(new Date()) && row.original.status !== "done";
       return (
         <Chip color={overdue ? "danger" : "warning"} size="sm" variant="soft">
@@ -94,7 +94,7 @@ const columns: LegacyColumnDef<Issue>[] = [
     accessorKey: "priority",
     header: "Priority",
     cell: ({ row }) => (
-      <span className="text-[11px] text-muted">{PRIORITY_LABELS[row.original.priority]}</span>
+      <span className="text-xs text-muted">{PRIORITY_LABELS[row.original.priority]}</span>
     ),
     size: 90,
   },
@@ -168,7 +168,7 @@ export function IssueList() {
                 {headerGroup.headers.map((header) => (
                   <th
                     key={header.id}
-                    className="px-4 py-2 text-left text-[11px] font-medium tracking-wide text-muted uppercase"
+                    className="px-4 py-2 text-left text-xs font-medium tracking-wide text-muted uppercase"
                     style={{ width: header.column.columnDef.size }}
                   >
                     {header.isPlaceholder

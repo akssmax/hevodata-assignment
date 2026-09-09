@@ -6,6 +6,7 @@ import { useMemo } from "react";
 import { EmptyState } from "@/components/empty-state";
 import { IconCalendar, IconInbox } from "@/components/icons";
 import { IssueCard } from "@/components/issue/issue-card";
+import { MeetingJoinLink } from "@/components/issue/meeting-join";
 import { ProgressBlock } from "@/components/today/progress-block";
 import { useSearch, useWorkspace } from "@/components/workspace-provider";
 import { useIssues } from "@/hooks/use-issues";
@@ -70,7 +71,7 @@ function DayStrip({
         <p className="text-xs font-medium tracking-wide text-muted uppercase">
           Day structure
         </p>
-        <p className="text-[11px] text-muted">
+        <p className="text-xs text-muted">
           {STRIP_START}:00 – {STRIP_END}:00
         </p>
       </div>
@@ -105,10 +106,10 @@ function DayStrip({
               whileHover={{ scaleY: 1.06 }}
               transition={{ type: "spring", stiffness: 500, damping: 30 }}
             >
-              <span className="truncate text-[11px] leading-tight font-medium text-foreground">
+              <span className="truncate text-xs leading-tight font-medium text-foreground">
                 {issue.title}
               </span>
-              <span className="truncate text-[10px] leading-tight text-foreground/60">
+              <span className="truncate text-xs leading-tight text-foreground/60">
                 {formatTimeRange(issue.startAt, issue.endAt)}
               </span>
             </motion.button>
@@ -121,14 +122,14 @@ function DayStrip({
           />
         )}
       </div>
-      <div className="mt-2 flex justify-between text-[10px] text-muted">
+      <div className="mt-2 flex justify-between text-xs text-muted">
         {hourTicks
           .filter((hour) => hour % 2 === 0)
           .map((hour) => (
             <span key={hour}>{hour}:00</span>
           ))}
       </div>
-      <div className="mt-3 flex items-center gap-4 text-[10px] text-muted">
+      <div className="mt-3 flex items-center gap-4 text-xs text-muted">
         <span className="flex items-center gap-1.5">
           <span className="size-2 rounded-sm bg-indigo-300/70" /> Meetings & events
         </span>
@@ -142,36 +143,35 @@ function DayStrip({
 
 export function TodayAgenda() {
   const { search } = useSearch();
-  const { openIssue, openCreate, activePersonaId, viewDate } = useWorkspace();
+  const { openIssue, openCreate, activePersonaId } = useWorkspace();
   const issues = useIssues(activePersonaId, search);
   const persona = getPersona(activePersonaId);
-  const viewDay = startOfDay(viewDate);
-  const viewDayKey = toDateKey(viewDay);
-  const isViewingToday = viewDayKey === toDateKey(startOfDay());
+  const today = startOfDay();
+  const todayKey = toDateKey(today);
 
   const { attention, scheduled, meetings, tasks } = useMemo(() => {
     const filtered = issues ?? [];
-    const overdue = filtered.filter((issue) => isOverdue(issue, viewDayKey));
+    const overdue = filtered.filter((issue) => isOverdue(issue, todayKey));
     const urgentToday = filtered.filter(
       (issue) =>
-        !isOverdue(issue, viewDayKey) &&
+        !isOverdue(issue, todayKey) &&
         issue.priority === "urgent" &&
         issue.status !== "done" &&
-        issue.dueDate === viewDayKey,
+        issue.dueDate === todayKey,
     );
     const attentionItems = [...overdue, ...urgentToday];
     const scheduledItems = filtered
-      .filter((issue) => isScheduledToday(issue, viewDayKey))
+      .filter((issue) => isScheduledToday(issue, todayKey))
       .sort((a, b) => (a.startAt ?? "").localeCompare(b.startAt ?? ""));
     const meetingItems = scheduledItems.filter((issue) => issue.kind === "event");
-    const taskItems = filtered.filter((issue) => isTaskDueToday(issue, viewDayKey));
+    const taskItems = filtered.filter((issue) => isTaskDueToday(issue, todayKey));
     return {
       attention: attentionItems,
       scheduled: scheduledItems,
       meetings: meetingItems,
       tasks: taskItems,
     };
-  }, [issues, viewDayKey]);
+  }, [issues, todayKey]);
 
   if (issues === undefined) {
     return (
@@ -185,7 +185,7 @@ export function TodayAgenda() {
     <div className="mx-auto flex max-w-3xl flex-col gap-6 px-6 py-8">
       <motion.div variants={section} initial="hidden" animate="show" custom={0}>
         <p className="text-xs tracking-wide text-muted uppercase">
-          {viewDay.toLocaleDateString(undefined, {
+          {today.toLocaleDateString(undefined, {
             weekday: "long",
             month: "long",
             day: "numeric",
@@ -210,11 +210,11 @@ export function TodayAgenda() {
       </motion.div>
 
       <motion.div variants={section} initial="hidden" animate="show" custom={1}>
-        <ProgressBlock issues={issues} referenceDate={viewDay} />
+        <ProgressBlock issues={issues} referenceDate={today} />
       </motion.div>
 
       <motion.div variants={section} initial="hidden" animate="show" custom={2}>
-        <DayStrip scheduled={scheduled} onOpen={openIssue} showNow={isViewingToday} />
+        <DayStrip scheduled={scheduled} onOpen={openIssue} showNow />
       </motion.div>
 
       {attention.length > 0 && (
@@ -246,51 +246,60 @@ export function TodayAgenda() {
         custom={4}
         className="flex flex-col gap-3"
       >
-        <h3 className="text-sm font-medium">
-          {isViewingToday ? "Today's schedule" : "Schedule"}
-        </h3>
+        <h3 className="text-sm font-medium">Today&apos;s schedule</h3>
         {scheduled.length === 0 ? (
           <EmptyState
             icon={<IconCalendar className="size-5" />}
-            title={isViewingToday ? "Nothing time-blocked today" : "Nothing time-blocked"}
+            title="Nothing time-blocked today"
             description="Click a calendar slot or create an event to structure your day."
             actionLabel="Block time"
             onAction={() => openCreate({ kind: "event", status: "todo" })}
           />
         ) : (
-          <div className="relative">
-            <span
-              aria-hidden
-              className="absolute top-1 bottom-1 left-[7px] w-px bg-gradient-to-b from-accent/60 via-accent/25 to-accent/5"
-            />
-            {scheduled.map((issue) => {
-              const dotColor = issue.kind === "event" ? "#a5b4fc" : "#6ee7b7";
+          <div className="flex flex-col">
+            {scheduled.map((issue, index) => {
+              const isEvent = issue.kind === "event";
+              const isLast = index === scheduled.length - 1;
+              const markerColor = isEvent ? "#a5b4fc" : "#6ee7b7";
               return (
                 <button
                   key={issue.id}
                   type="button"
                   onClick={() => openIssue(issue.id)}
-                  className="relative mb-3 block w-full pl-6 text-left last:mb-0"
+                  className="group flex w-full gap-4 pb-4 text-left last:pb-0"
                 >
-                  <span
+                  <div
                     aria-hidden
-                    className="absolute top-3.5 left-[2px] size-2.5 rounded-full ring-4 ring-background"
-                    style={{
-                      backgroundColor: dotColor,
-                      boxShadow: `0 0 8px ${dotColor}66`,
-                    }}
-                  />
+                    className="flex w-5 shrink-0 flex-col items-center self-stretch"
+                  >
+                    <div className="flex h-4 shrink-0 items-center justify-center pt-2.5">
+                      <span
+                        className="size-2.5 shrink-0 rounded-full ring-[3px] ring-background"
+                        style={{
+                          backgroundColor: markerColor,
+                          boxShadow: `0 0 10px ${markerColor}55`,
+                        }}
+                      />
+                    </div>
+                    {!isLast && (
+                      <div className="mt-1 w-0.5 flex-1 rounded-full bg-gradient-to-b from-accent/40 via-accent/20 to-accent/8" />
+                    )}
+                  </div>
                   <motion.span
                     whileHover={{ x: 3 }}
                     transition={{ type: "spring", stiffness: 600, damping: 35 }}
-                    className="block rounded-lg border border-border bg-surface/60 px-3 py-2.5 transition-colors hover:border-accent/40 hover:bg-surface"
+                    className="min-w-0 flex-1 rounded-lg border border-border bg-surface/60 px-3 py-2.5 transition-colors hover:border-accent/40 hover:bg-surface"
                   >
-                    <p className="text-[11px] text-muted">
-                      {formatTimeRange(issue.startAt, issue.endAt)}
-                      {issue.kind === "event" ? " · Meeting" : ""}
-                    </p>
-                    <p className="mt-0.5 text-sm font-medium">{issue.title}</p>
-                    <p className="font-mono text-[11px] text-muted">{issue.identifier}</p>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs text-muted">
+                          {formatTimeRange(issue.startAt, issue.endAt)}
+                          {isEvent ? " · Meeting" : ""}
+                        </p>
+                        <p className="mt-0.5 text-sm font-medium">{issue.title}</p>
+                      </div>
+                      {isEvent && issue.meetingUrl && <MeetingJoinLink issue={issue} />}
+                    </div>
                   </motion.span>
                 </button>
               );
@@ -311,11 +320,7 @@ export function TodayAgenda() {
           <EmptyState
             icon={<IconInbox className="size-5" />}
             title="All clear"
-            description={
-              isViewingToday
-                ? "No open tasks waiting for today. Enjoy the focus time."
-                : "No open tasks for this day."
-            }
+            description="No open tasks waiting for today. Enjoy the focus time."
             actionLabel="New task"
             onAction={() => openCreate({ kind: "task", status: "todo" })}
           />

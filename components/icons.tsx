@@ -87,6 +87,38 @@ export function Logo({
   );
 }
 
+/** Google Meet mark — colored camera tile. */
+export function IconGoogleMeet({ className }: IconProps) {
+  return (
+    <svg aria-hidden className={className} viewBox="0 0 24 24" fill="none">
+      <path
+        d="M6.5 5h7.75A2.75 2.75 0 0 1 17 7.75v8.5A2.75 2.75 0 0 1 14.25 19H6.5A2.75 2.75 0 0 1 3.75 16.25v-8.5A2.75 2.75 0 0 1 6.5 5Z"
+        fill="#00832D"
+      />
+      <path d="M17 8.5 21 6v12l-4-2.5V8.5Z" fill="#0066DA" />
+      <path
+        d="M8.25 9.5h4.25v5H8.25a.75.75 0 0 1-.75-.75v-3.5c0-.414.336-.75.75-.75Z"
+        fill="#fff"
+      />
+    </svg>
+  );
+}
+
+/** Microsoft Teams mark — purple T on rounded square. */
+export function IconMicrosoftTeams({ className }: IconProps) {
+  return (
+    <svg aria-hidden className={className} viewBox="0 0 24 24" fill="none">
+      <rect x="3" y="5" width="14" height="14" rx="2.5" fill="#5059C9" />
+      <path
+        d="M8.5 9.25h3.25v5.5H8.5V9.25Zm5.5 0H17v5.5h-3V9.25Z"
+        fill="#fff"
+      />
+      <circle cx="18.5" cy="7.5" r="2.75" fill="#7B83EB" />
+      <rect x="15.75" y="10.5" width="5.5" height="7" rx="1.25" fill="#7B83EB" />
+    </svg>
+  );
+}
+
 export function PriorityBars({
   level,
   className,

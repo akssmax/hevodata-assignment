@@ -21,17 +21,24 @@ export const IssueCard = memo(function IssueCard({
   );
 
   return (
-    <motion.button
-      type="button"
+    <motion.div
+      role="button"
+      tabIndex={0}
       onClick={() => onOpen(issue.id)}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onOpen(issue.id);
+        }
+      }}
       whileHover={{ y: -2 }}
       whileTap={{ scale: 0.98 }}
       transition={{ type: "spring", stiffness: 500, damping: 32 }}
-      className="w-full rounded-lg border border-border/70 bg-surface px-3 py-2.5 text-left shadow-sm transition-colors hover:border-border hover:bg-surface"
+      className="w-full cursor-grab rounded-lg border border-border/70 bg-surface px-3 py-2.5 text-left shadow-sm transition-colors hover:border-border hover:bg-surface active:cursor-grabbing"
     >
       <div className="mb-1.5 flex items-center gap-2">
         <PriorityIcon priority={issue.priority} />
-        <span className="font-mono text-[11px] text-muted">{issue.identifier}</span>
+        <span className="font-mono text-xs text-muted">{issue.identifier}</span>
         {issue.kind === "event" && <IconCalendar className="size-3 text-indigo-300" />}
       </div>
       <p className="text-[13px] leading-snug font-medium text-foreground">{issue.title}</p>
@@ -50,6 +57,6 @@ export const IssueCard = memo(function IssueCard({
           )}
         </div>
       )}
-    </motion.button>
+    </motion.div>
   );
 });
