@@ -41,7 +41,10 @@ export function FieldSelect<T extends string>({
     >
       {label ? <Label>{label}</Label> : null}
       <Select.Trigger>
-        <Select.Value />
+        <span className="flex min-w-0 flex-1 items-center gap-2">
+          {renderIcon?.(value)}
+          <Select.Value />
+        </span>
         <Select.Indicator />
       </Select.Trigger>
       <Select.Popover>
