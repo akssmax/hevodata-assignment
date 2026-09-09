@@ -62,6 +62,21 @@ function CalendarChrome() {
   );
 }
 
+function DatePickerTriggerField() {
+  return (
+    <DatePicker.Trigger className="w-full p-0">
+      <DateField.Group fullWidth>
+        <DateField.Input>
+          {(segment) => <DateField.Segment segment={segment} />}
+        </DateField.Input>
+        <DateField.Suffix>
+          <DatePicker.TriggerIndicator />
+        </DateField.Suffix>
+      </DateField.Group>
+    </DatePicker.Trigger>
+  );
+}
+
 export function DueDateField({
   label,
   value,
@@ -74,18 +89,12 @@ export function DueDateField({
   return (
     <DatePicker
       aria-label={label ?? "Due date"}
+      className="w-full"
       value={toCalendarDate(value)}
       onChange={(next) => onChange(fromDateValue(next))}
     >
       {label ? <Label>{label}</Label> : null}
-      <DatePicker.Trigger>
-        <DateField.Group>
-          <DateField.Input>
-            {(segment) => <DateField.Segment segment={segment} />}
-          </DateField.Input>
-        </DateField.Group>
-        <DatePicker.TriggerIndicator />
-      </DatePicker.Trigger>
+      <DatePickerTriggerField />
       <DatePicker.Popover>
         <Calendar aria-label={label}>
           <CalendarChrome />
@@ -116,21 +125,14 @@ export function DateTimeField({
           </Button>
         )}
       </div>
-      <div className="flex items-center gap-2">
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
         <DatePicker
           aria-label={`${label} date`}
-          className="w-40"
+          className="min-w-0 w-full"
           value={day}
           onChange={(next) => onChange(combineIso(next, time ?? new Time(9, 0)))}
         >
-          <DatePicker.Trigger>
-            <DateField.Group>
-              <DateField.Input>
-                {(segment) => <DateField.Segment segment={segment} />}
-              </DateField.Input>
-            </DateField.Group>
-            <DatePicker.TriggerIndicator />
-          </DatePicker.Trigger>
+          <DatePickerTriggerField />
           <DatePicker.Popover>
             <Calendar aria-label={`${label} date`}>
               <CalendarChrome />
@@ -139,7 +141,7 @@ export function DateTimeField({
         </DatePicker>
         <TimeField
           aria-label={`${label} time`}
-          className="w-24"
+          className="w-[7.25rem] shrink-0"
           value={time}
           onChange={(next) => {
             if (!next) return;
@@ -147,7 +149,7 @@ export function DateTimeField({
             onChange(combineIso(base, next as Time));
           }}
         >
-          <TimeField.Group>
+          <TimeField.Group fullWidth>
             <TimeField.Input>
               {(segment) => <TimeField.Segment segment={segment} />}
             </TimeField.Input>
