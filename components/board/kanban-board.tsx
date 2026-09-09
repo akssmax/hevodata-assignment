@@ -4,25 +4,33 @@ import {
   DndContext,
   DragOverlay,
   PointerSensor,
-  closestCorners,
+  pointerWithin,
+  rectIntersection,
+  useDraggable,
   useDroppable,
   useSensor,
   useSensors,
+  type CollisionDetection,
   type DragEndEvent,
   type DragStartEvent,
   type Over,
 } from "@dnd-kit/core";
-import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Chip, Spinner } from "@heroui/react";
 import { AnimatePresence, motion } from "framer-motion";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { IssueCard } from "@/components/issue/issue-card";
 import { useSearch, useWorkspace } from "@/components/workspace-provider";
 import { groupByStatus, useIssues } from "@/hooks/use-issues";
 import { STATUS_DOT, STATUS_LABELS } from "@/lib/constants";
 import { moveIssue } from "@/lib/issue-service";
 import { STATUSES, type Issue, type Status } from "@/lib/types";
+
+const collisionDetection: CollisionDetection = (args) => {
+  const pointerHits = pointerWithin(args);
+  if (pointerHits.length > 0) return pointerHits;
+  return rectIntersection(args);
+};
 
 function resolveOverStatus(over: Over, issues: Issue[]): Status | null {
   const data = over.data.current;
@@ -38,17 +46,33 @@ function resolveOverStatus(over: Over, issues: Issue[]): Status | null {
   return null;
 }
 
-function SortableIssue({ issue, onOpen }: { issue: Issue; onOpen: (id: string) => void }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+function DraggableIssue({ issue, onOpen }: { issue: Issue; onOpen: (id: string) => void }) {
+  const { attributes, listeners, setNodeRef: setDragRef, transform, isDragging } = useDraggable({
+    id: issue.id,
+    data: { type: "issue", issue },
+  });
+  const { setNodeRef: setDropRef } = useDroppable({
     id: issue.id,
     data: { type: "issue", issue },
   });
 
+  const setNodeRef = useCallback(
+    (node: HTMLElement | null) => {
+      setDragRef(node);
+      setDropRef(node);
+    },
+    [setDragRef, setDropRef],
+  );
+
   return (
     <div
       ref={setNodeRef}
-      style={{ transform: CSS.Transform.toString(transform), transition, touchAction: "none" }}
-      className={isDragging ? "opacity-40" : undefined}
+      style={{
+        transform: CSS.Translate.toString(transform),
+        touchAction: "none",
+        opacity: isDragging ? 0.35 : 1,
+        pointerEvents: isDragging ? "none" : undefined,
+      }}
       {...attributes}
       {...listeners}
     >
@@ -70,7 +94,6 @@ function Column({
     id: status,
     data: { type: "column", status },
   });
-  const itemIds = useMemo(() => issues.map((issue) => issue.id), [issues]);
 
   return (
     <section
@@ -102,11 +125,9 @@ function Column({
         </AnimatePresence>
       </div>
       <div className="flex min-h-24 flex-1 flex-col gap-2">
-        <SortableContext items={itemIds} strategy={verticalListSortingStrategy}>
-          {issues.map((issue) => (
-            <SortableIssue key={issue.id} issue={issue} onOpen={onOpen} />
-          ))}
-        </SortableContext>
+        {issues.map((issue) => (
+          <DraggableIssue key={issue.id} issue={issue} onOpen={onOpen} />
+        ))}
         {issues.length === 0 && (
           <div
             className={`flex flex-1 items-center justify-center rounded-lg border border-dashed px-3 py-6 text-center text-xs transition-colors ${
@@ -127,7 +148,7 @@ export function KanbanBoard() {
   const issues = useIssues(activePersonaId, search);
   const grouped = useMemo(() => groupByStatus(issues), [issues]);
   const [active, setActive] = useState<Issue | null>(null);
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
   if (issues === undefined) {
     return (
@@ -167,15 +188,13 @@ export function KanbanBoard() {
       beforeRank = targetColumn[targetColumn.length - 1]?.rank;
     }
 
-    if (current.status === overStatus && overIssue?.id === current.id) return;
-
     await moveIssue(current.id, overStatus, beforeRank, afterRank);
   }
 
   return (
     <div className="h-full overflow-x-auto px-5 py-5">
       <DndContext
-        collisionDetection={closestCorners}
+        collisionDetection={collisionDetection}
         sensors={sensors}
         onDragEnd={onDragEnd}
         onDragStart={onDragStart}
@@ -185,9 +204,9 @@ export function KanbanBoard() {
             <Column key={status} issues={grouped[status]} status={status} onOpen={openIssue} />
           ))}
         </div>
-        <DragOverlay>
+        <DragOverlay dropAnimation={{ duration: 180, easing: "ease-out" }}>
           {active ? (
-            <div className="w-72">
+            <div className="w-72 rotate-2 cursor-grabbing shadow-lg">
               <IssueCard issue={active} onOpen={() => undefined} />
             </div>
           ) : null}
