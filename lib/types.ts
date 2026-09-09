@@ -1,0 +1,72 @@
+export const STATUSES = ["backlog", "todo", "in_progress", "done"] as const;
+export type Status = (typeof STATUSES)[number];
+
+export const PRIORITIES = ["urgent", "high", "medium", "low", "none"] as const;
+export type Priority = (typeof PRIORITIES)[number];
+
+export const KINDS = ["task", "event"] as const;
+export type IssueKind = (typeof KINDS)[number];
+
+export interface Comment {
+  id: string;
+  authorId: string;
+  body: string;
+  createdAt: string;
+}
+
+export interface Attachment {
+  id: string;
+  name: string;
+  size: number;
+  type: string;
+  dataUrl: string;
+  createdAt: string;
+}
+
+export interface Issue {
+  id: string;
+  identifier: string;
+  ownerId: string;
+  kind: IssueKind;
+  title: string;
+  description: string;
+  status: Status;
+  priority: Priority;
+  rank: string;
+  dueDate?: string;
+  startAt?: string;
+  endAt?: string;
+  comments: Comment[];
+  attachments: Attachment[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MetaRow {
+  key: string;
+  value: number | string;
+}
+
+export interface CreateIssueInput {
+  title: string;
+  description?: string;
+  ownerId: string;
+  kind?: IssueKind;
+  status?: Status;
+  priority?: Priority;
+  dueDate?: string;
+  startAt?: string;
+  endAt?: string;
+}
+
+export interface UpdateIssueInput {
+  title?: string;
+  description?: string;
+  kind?: IssueKind;
+  status?: Status;
+  priority?: Priority;
+  rank?: string;
+  dueDate?: string | null;
+  startAt?: string | null;
+  endAt?: string | null;
+}
