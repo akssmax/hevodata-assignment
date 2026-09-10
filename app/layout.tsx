@@ -19,6 +19,11 @@ export const metadata: Metadata = {
   description: "A Linear-inspired day manager for tasks and calendar time.",
 };
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+};
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html

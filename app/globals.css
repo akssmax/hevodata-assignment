@@ -42,3 +42,21 @@ body {
 ::selection {
   background: color-mix(in oklch, var(--accent) 35%, transparent);
 }
+
+/* Minimum 44×44px touch target (WCAG 2.5.5). */
+.touch-target {
+  min-height: 2.75rem;
+  min-width: 2.75rem;
+}
+
+/* Respect the OS motion setting across Framer Motion and CSS transitions alike. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

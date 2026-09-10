@@ -3,7 +3,9 @@ import {
   CalendarDaysIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  ExclamationTriangleIcon,
   InboxIcon,
+  LightBulbIcon,
   ListBulletIcon,
   PlusIcon,
   Squares2X2Icon,
@@ -47,6 +49,14 @@ export function IconChevronRight({ className }: IconProps) {
 
 export function IconSwatch({ className }: IconProps) {
   return <SwatchIcon aria-hidden className={className} />;
+}
+
+export function IconThinking({ className }: IconProps) {
+  return <LightBulbIcon aria-hidden className={className} />;
+}
+
+export function IconWarning({ className }: IconProps) {
+  return <ExclamationTriangleIcon aria-hidden className={className} />;
 }
 
 /** Dayline wordmark for sidebar header. */

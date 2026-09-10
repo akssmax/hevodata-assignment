@@ -40,3 +40,29 @@ db.version(3)
         if (!issue.attachments) issue.attachments = [];
       });
   });
+
+const PERSONAL_SEED_TITLES = new Set([
+  "Gym",
+  "Yoga class",
+  "Grocery run",
+  "Dentist appointment",
+  "Call mom",
+  "Pick up dry cleaning",
+]);
+
+db.version(4)
+  .stores({
+    issues:
+      "id, identifier, ownerId, scope, kind, status, priority, startAt, dueDate, [ownerId+scope], [ownerId+status], [status+rank]",
+    meta: "key",
+  })
+  .upgrade(async (tx) => {
+    await tx
+      .table("issues")
+      .toCollection()
+      .modify((issue: Partial<Issue>) => {
+        if (!issue.scope) {
+          issue.scope = issue.title && PERSONAL_SEED_TITLES.has(issue.title) ? "personal" : "work";
+        }
+      });
+  });

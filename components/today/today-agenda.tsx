@@ -1,14 +1,19 @@
 "use client";
 
-import { Chip, Spinner } from "@heroui/react";
+import { Chip, Popover, Spinner } from "@heroui/react";
 import { motion } from "framer-motion";
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { EmptyState } from "@/components/empty-state";
 import { IconCalendar, IconInbox } from "@/components/icons";
 import { IssueCard } from "@/components/issue/issue-card";
 import { MeetingJoinLink } from "@/components/issue/meeting-join";
+import { PriorityIcon } from "@/components/issue/priority-icon";
+import { StatusChip } from "@/components/issue/status-chip";
+import { ScopeBadge } from "@/components/issue/scope-badge";
+import { ScopeTabs } from "@/components/scope/scope-tabs";
 import { ProgressBlock } from "@/components/today/progress-block";
 import { useSearch, useWorkspace } from "@/components/workspace-provider";
+import { SCOPE_DOT } from "@/lib/constants";
 import { useIssues } from "@/hooks/use-issues";
 import { CALENDAR_END_HOUR, CALENDAR_START_HOUR } from "@/lib/constants";
 import { formatTimeRange, minutesSinceStart, startOfDay, toDateKey } from "@/lib/dates";
@@ -18,6 +23,132 @@ import type { Issue } from "@/lib/types";
 const STRIP_START = CALENDAR_START_HOUR;
 const STRIP_END = CALENDAR_END_HOUR;
 const STRIP_HOURS = STRIP_END - STRIP_START;
+
+function DayStripBlockDetails({ issue }: { issue: Issue }) {
+  const isEvent = issue.kind === "event";
+
+  return (
+    <div className="flex max-w-[16rem] flex-col gap-2 text-left">
+      <div className="flex flex-wrap items-center gap-2">
+        <ScopeBadge scope={issue.scope} />
+        <span className="font-mono text-xs text-muted">{issue.identifier}</span>
+        <StatusChip status={issue.status} size="sm" />
+      </div>
+      <p className="text-sm leading-snug font-medium">{issue.title}</p>
+      <p className="text-xs text-muted">
+        {formatTimeRange(issue.startAt, issue.endAt)}
+        {isEvent ? " · Meeting" : " · Focus block"}
+      </p>
+      {issue.description.trim() && (
+        <p className="line-clamp-3 text-xs leading-relaxed text-muted">{issue.description}</p>
+      )}
+      <div className="flex items-center justify-between gap-2">
+        <PriorityIcon priority={issue.priority} />
+        {isEvent && issue.meetingUrl && <MeetingJoinLink issue={issue} variant="inline" />}
+      </div>
+    </div>
+  );
+}
+
+function DayStripBlock({
+  issue,
+  onOpen,
+}: {
+  issue: Issue;
+  onOpen: (id: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [canHover, setCanHover] = useState(false);
+  const hovering = useRef(false);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    setCanHover(window.matchMedia("(hover: hover)").matches);
+  }, []);
+
+  if (!issue.startAt || !issue.endAt) return null;
+
+  const startMin = minutesSinceStart(issue.startAt, STRIP_START);
+  const durationMin =
+    (new Date(issue.endAt).getTime() - new Date(issue.startAt).getTime()) / 60000;
+  const left = Math.max(0, (startMin / (STRIP_HOURS * 60)) * 100);
+  const width = Math.max(3, (durationMin / (STRIP_HOURS * 60)) * 100);
+  const isEvent = issue.kind === "event";
+  const scopeColor = SCOPE_DOT[issue.scope];
+  const timeRange = formatTimeRange(issue.startAt, issue.endAt);
+
+  function showPopover() {
+    hovering.current = true;
+    if (closeTimer.current) {
+      clearTimeout(closeTimer.current);
+      closeTimer.current = null;
+    }
+    setOpen(true);
+  }
+
+  function scheduleClose() {
+    hovering.current = false;
+    closeTimer.current = setTimeout(() => setOpen(false), 120);
+  }
+
+  /** Popover opens on hover only — ignore the trigger's default click-to-toggle. */
+  function onPopoverOpenChange(next: boolean) {
+    if (next && !hovering.current) return;
+    setOpen(next);
+  }
+
+  return (
+    <div
+      className="absolute top-2 bottom-2 min-w-11"
+      style={{ left: `${left}%`, width: `${width}%` }}
+    >
+      <Popover isOpen={open} onOpenChange={onPopoverOpenChange}>
+        <Popover.Trigger
+          aria-label={`${issue.title}, ${timeRange}`}
+          className={`flex h-full min-h-11 w-full cursor-pointer flex-col justify-center gap-0.5 overflow-hidden rounded-md border-2 px-2 text-left ${
+            isEvent
+              ? "bg-indigo-300/30 hover:bg-indigo-300/45"
+              : "bg-emerald-300/15 hover:bg-emerald-300/30"
+          }`}
+          style={{ borderColor: `${scopeColor}99` }}
+          onMouseEnter={canHover ? showPopover : undefined}
+          onMouseLeave={canHover ? scheduleClose : undefined}
+          onClick={() => {
+            if (!canHover && !open) {
+              showPopover();
+              return;
+            }
+            setOpen(false);
+            onOpen(issue.id);
+          }}
+        >
+          <motion.span
+            className="flex flex-col justify-center gap-0.5 overflow-hidden"
+            whileHover={{ scaleY: 1.06 }}
+            transition={{ type: "spring", stiffness: 500, damping: 30 }}
+          >
+            <span className="truncate text-xs leading-tight font-medium text-foreground">
+              {issue.title}
+            </span>
+            <span className="truncate text-xs leading-tight text-foreground/60">{timeRange}</span>
+          </motion.span>
+        </Popover.Trigger>
+        <Popover.Content
+          className="w-72"
+          offset={10}
+          placement="top"
+          onMouseEnter={canHover ? showPopover : undefined}
+          onMouseLeave={canHover ? scheduleClose : undefined}
+        >
+          <Popover.Dialog>
+            <Popover.Arrow />
+            <DayStripBlockDetails issue={issue} />
+          </Popover.Dialog>
+        </Popover.Content>
+      </Popover>
+    </div>
+  );
+}
 
 function isOverdue(issue: Issue, today: string) {
   return Boolean(issue.dueDate && issue.dueDate < today && issue.status !== "done");
@@ -83,38 +214,9 @@ function DayStrip({
             style={{ left: `${((hour - STRIP_START) / STRIP_HOURS) * 100}%` }}
           />
         ))}
-        {scheduled.map((issue) => {
-          if (!issue.startAt || !issue.endAt) return null;
-          const startMin = minutesSinceStart(issue.startAt, STRIP_START);
-          const durationMin =
-            (new Date(issue.endAt).getTime() - new Date(issue.startAt).getTime()) / 60000;
-          const left = Math.max(0, (startMin / (STRIP_HOURS * 60)) * 100);
-          const width = Math.max(3, (durationMin / (STRIP_HOURS * 60)) * 100);
-          const isEvent = issue.kind === "event";
-          return (
-            <motion.button
-              key={issue.id}
-              type="button"
-              title={`${issue.title} · ${formatTimeRange(issue.startAt, issue.endAt)}`}
-              onClick={() => onOpen(issue.id)}
-              className={`absolute top-2 bottom-2 flex flex-col justify-center gap-0.5 overflow-hidden rounded-md border px-2 text-left ${
-                isEvent
-                  ? "border-indigo-300/50 bg-indigo-300/30 hover:bg-indigo-300/45"
-                  : "border-emerald-300/40 bg-emerald-300/15 hover:bg-emerald-300/30"
-              }`}
-              style={{ left: `${left}%`, width: `${width}%` }}
-              whileHover={{ scaleY: 1.06 }}
-              transition={{ type: "spring", stiffness: 500, damping: 30 }}
-            >
-              <span className="truncate text-xs leading-tight font-medium text-foreground">
-                {issue.title}
-              </span>
-              <span className="truncate text-xs leading-tight text-foreground/60">
-                {formatTimeRange(issue.startAt, issue.endAt)}
-              </span>
-            </motion.button>
-          );
-        })}
+        {scheduled.map((issue) => (
+          <DayStripBlock key={issue.id} issue={issue} onOpen={onOpen} />
+        ))}
         {showNow && (
           <div
             className="pointer-events-none absolute top-0 bottom-0 w-px bg-danger"
@@ -129,12 +231,18 @@ function DayStrip({
             <span key={hour}>{hour}:00</span>
           ))}
       </div>
-      <div className="mt-3 flex items-center gap-4 text-xs text-muted">
+      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
         <span className="flex items-center gap-1.5">
           <span className="size-2 rounded-sm bg-indigo-300/70" /> Meetings & events
         </span>
         <span className="flex items-center gap-1.5">
           <span className="size-2 rounded-sm bg-emerald-300/60" /> Focus blocks
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="size-2 rounded-full" style={{ backgroundColor: SCOPE_DOT.work }} /> Work
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="size-2 rounded-full" style={{ backgroundColor: SCOPE_DOT.personal }} /> Personal
         </span>
       </div>
     </div>
@@ -143,8 +251,8 @@ function DayStrip({
 
 export function TodayAgenda() {
   const { search } = useSearch();
-  const { openIssue, openCreate, activePersonaId } = useWorkspace();
-  const issues = useIssues(activePersonaId, search);
+  const { openIssue, openCreate, activePersonaId, activeScope } = useWorkspace();
+  const issues = useIssues(activePersonaId, search, activeScope);
   const persona = getPersona(activePersonaId);
   const today = startOfDay();
   const todayKey = toDateKey(today);
@@ -182,7 +290,7 @@ export function TodayAgenda() {
   }
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-6 px-6 py-8">
+    <div className="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-6 md:px-6 md:py-8">
       <motion.div variants={section} initial="hidden" animate="show" custom={0}>
         <p className="text-xs tracking-wide text-muted uppercase">
           {today.toLocaleDateString(undefined, {
@@ -194,6 +302,7 @@ export function TodayAgenda() {
         <h2 className="mt-1 text-2xl font-semibold tracking-tight">
           {greeting()}, {persona.firstName}
         </h2>
+        <ScopeTabs className="mt-4 w-full max-w-md" />
         <div className="mt-3 flex flex-wrap gap-2">
           <Chip size="sm" variant="soft" color="accent">
             {meetings.length} {meetings.length === 1 ? "meeting" : "meetings"}
@@ -250,10 +359,22 @@ export function TodayAgenda() {
         {scheduled.length === 0 ? (
           <EmptyState
             icon={<IconCalendar className="size-5" />}
-            title="Nothing time-blocked today"
+            title={
+              activeScope === "personal"
+                ? "No personal items scheduled today"
+                : activeScope === "work"
+                  ? "Nothing time-blocked for work today"
+                  : "Nothing time-blocked today"
+            }
             description="Click a calendar slot or create an event to structure your day."
             actionLabel="Block time"
-            onAction={() => openCreate({ kind: "event", status: "todo" })}
+            onAction={() =>
+              openCreate({
+                kind: "event",
+                status: "todo",
+                scope: activeScope === "personal" ? "personal" : "work",
+              })
+            }
           />
         ) : (
           <div className="flex flex-col">
@@ -288,7 +409,8 @@ export function TodayAgenda() {
                   <motion.span
                     whileHover={{ x: 3 }}
                     transition={{ type: "spring", stiffness: 600, damping: 35 }}
-                    className="min-w-0 flex-1 rounded-lg border border-border bg-surface/60 px-3 py-2.5 transition-colors hover:border-accent/40 hover:bg-surface"
+                    className="min-w-0 flex-1 rounded-lg border border-l-2 border-border bg-surface/60 px-3 py-2.5 transition-colors hover:border-accent/40 hover:bg-surface"
+                    style={{ borderLeftColor: SCOPE_DOT[issue.scope] }}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
@@ -319,10 +441,22 @@ export function TodayAgenda() {
         {tasks.length === 0 ? (
           <EmptyState
             icon={<IconInbox className="size-5" />}
-            title="All clear"
+            title={
+              activeScope === "personal"
+                ? "No personal tasks for today"
+                : activeScope === "work"
+                  ? "All clear on work tasks"
+                  : "All clear"
+            }
             description="No open tasks waiting for today. Enjoy the focus time."
             actionLabel="New task"
-            onAction={() => openCreate({ kind: "task", status: "todo" })}
+            onAction={() =>
+              openCreate({
+                kind: "task",
+                status: "todo",
+                scope: activeScope === "personal" ? "personal" : "work",
+              })
+            }
           />
         ) : (
           <div className="flex flex-col gap-2">

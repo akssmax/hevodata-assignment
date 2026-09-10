@@ -1,12 +1,13 @@
 import { atLocalTime, dateKeyOffset } from "./dates";
 import { db } from "./db";
 import { PERSONAS } from "./personas";
-import type { Issue, IssueKind, MeetingPlatform, Priority, Status } from "./types";
+import type { Issue, IssueKind, IssueScope, MeetingPlatform, Priority, Status } from "./types";
 
 interface SeedIssue {
   title: string;
   description: string;
   kind: IssueKind;
+  scope?: IssueScope;
   status: Status;
   priority: Priority;
   rank: string;
@@ -106,11 +107,22 @@ const SEEDS: Record<string, SeedIssue[]> = {
       title: "Gym",
       description: "Protect the evening block.",
       kind: "event",
+      scope: "personal",
       status: "todo",
       priority: "none",
       rank: "9000",
       start: [0, 18, 30],
       end: [0, 19, 30],
+    },
+    {
+      title: "Pick up dry cleaning",
+      description: "Before the shop closes at 8.",
+      kind: "task",
+      scope: "personal",
+      status: "todo",
+      priority: "low",
+      rank: "10500",
+      dueOffset: 0,
     },
     {
       title: "Read: React Aria date pickers",
@@ -215,6 +227,17 @@ const SEEDS: Record<string, SeedIssue[]> = {
       start: [3, 11, 0],
       end: [3, 12, 0],
     },
+    {
+      title: "Yoga class",
+      description: "Studio session — leave by 6:45.",
+      kind: "event",
+      scope: "personal",
+      status: "todo",
+      priority: "none",
+      rank: "10000",
+      start: [0, 19, 0],
+      end: [0, 20, 0],
+    },
   ],
   kavya: [
     {
@@ -312,6 +335,37 @@ const SEEDS: Record<string, SeedIssue[]> = {
       rank: "9000",
       dueOffset: 4,
     },
+    {
+      title: "Grocery run",
+      description: "Vegetables, milk, and snacks for the week.",
+      kind: "task",
+      scope: "personal",
+      status: "todo",
+      priority: "medium",
+      rank: "10000",
+      dueOffset: 0,
+    },
+    {
+      title: "Dentist appointment",
+      description: "Six-month checkup — confirm insurance card.",
+      kind: "event",
+      scope: "personal",
+      status: "todo",
+      priority: "medium",
+      rank: "11000",
+      start: [0, 17, 0],
+      end: [0, 17, 45],
+    },
+    {
+      title: "Call mom",
+      description: "Quick catch-up before the weekend.",
+      kind: "task",
+      scope: "personal",
+      status: "todo",
+      priority: "low",
+      rank: "12000",
+      dueOffset: 0,
+    },
   ],
 };
 
@@ -320,6 +374,7 @@ function toIssue(ownerId: string, index: number, seed: SeedIssue, createdAt: str
     id: crypto.randomUUID(),
     identifier: `DAY-${index}`,
     ownerId,
+    scope: seed.scope ?? "work",
     kind: seed.kind,
     title: seed.title,
     description: seed.description,
@@ -338,7 +393,12 @@ function toIssue(ownerId: string, index: number, seed: SeedIssue, createdAt: str
   };
 }
 
+const SEEDED_KEY = "seeded";
+
 async function seedOnce() {
+  // Returning visitors skip the seed transaction entirely.
+  if ((await db.meta.get(SEEDED_KEY))?.value === 1) return;
+
   await db.transaction("rw", db.issues, db.meta, async () => {
     const createdAt = new Date().toISOString();
     let seq = Number((await db.meta.get("issueSeq"))?.value ?? 0);
@@ -353,6 +413,7 @@ async function seedOnce() {
     }
 
     await db.meta.put({ key: "issueSeq", value: seq });
+    await db.meta.put({ key: SEEDED_KEY, value: 1 });
   });
 }
 
@@ -360,7 +421,11 @@ let seedPromise: Promise<void> | null = null;
 
 export function ensureSeeded() {
   if (!seedPromise) {
-    seedPromise = seedOnce();
+    seedPromise = seedOnce().catch((error) => {
+      // Allow a retry to start a fresh attempt rather than replaying the failure.
+      seedPromise = null;
+      throw error;
+    });
   }
   return seedPromise;
 }

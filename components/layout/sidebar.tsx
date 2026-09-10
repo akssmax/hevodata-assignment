@@ -1,31 +1,13 @@
 "use client";
 
-import { Avatar, Button, Popover, Separator, Tooltip } from "@heroui/react";
+import { Button, Tooltip } from "@heroui/react";
 import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  IconBoard,
-  IconCalendar,
-  IconChevron,
-  IconInbox,
-  IconList,
-  IconPlus,
-  IconSwatch,
-  IconToday,
-  Logo,
-} from "@/components/icons";
-import { ThemeSwitcher } from "@/components/theme-switcher";
+import { IconChevron, IconPlus, Logo } from "@/components/icons";
+import { PersonaPopover } from "@/components/layout/persona-popover";
 import { useWorkspace } from "@/components/workspace-provider";
-import { PERSONAS, getPersona, personaAvatarStyle } from "@/lib/personas";
-
-const NAV = [
-  { href: "/", label: "Today", icon: IconToday },
-  { href: "/board", label: "Board", icon: IconBoard },
-  { href: "/calendar", label: "Calendar", icon: IconCalendar },
-  { href: "/issues", label: "Issues", icon: IconList },
-  { href: "/design-system", label: "Design system", icon: IconSwatch },
-];
+import { PRIMARY_NAV, SECONDARY_NAV } from "@/lib/nav";
 
 function NavItem({
   href,
@@ -44,7 +26,7 @@ function NavItem({
     <Link
       href={href}
       aria-label={label}
-      className={`relative flex items-center gap-2 rounded-md px-2.5 py-1.5 text-[13px] transition-colors ${
+      className={`relative flex min-h-10 items-center gap-2 rounded-md px-2.5 py-2 text-[13px] transition-colors ${
         collapsed ? "justify-center" : ""
       } ${active ? "text-foreground" : "text-muted hover:text-foreground"}`}
     >
@@ -79,74 +61,6 @@ function NavItem({
       <Tooltip.Trigger>{link}</Tooltip.Trigger>
       <Tooltip.Content placement="right">{label}</Tooltip.Content>
     </Tooltip>
-  );
-}
-
-function PersonaPopover({ collapsed }: { collapsed: boolean }) {
-  const { activePersonaId, setActivePersona } = useWorkspace();
-  const active = getPersona(activePersonaId);
-
-  return (
-    <Popover>
-      <Popover.Trigger aria-label="Switch persona">
-        <div
-          className={`flex w-full items-center gap-2.5 rounded-md px-2 py-2 text-left transition-colors hover:bg-default/60 ${
-            collapsed ? "justify-center px-0" : ""
-          }`}
-        >
-          <Avatar size="sm">
-            <Avatar.Fallback style={personaAvatarStyle(active)}>
-              {active.initials}
-            </Avatar.Fallback>
-          </Avatar>
-          {!collapsed && (
-            <div className="min-w-0">
-              <p className="truncate text-[13px] font-medium">{active.name}</p>
-              <p className="truncate text-xs text-muted">{active.role}</p>
-            </div>
-          )}
-        </div>
-      </Popover.Trigger>
-      <Popover.Content className="w-72" placement={collapsed ? "right" : "top"}>
-        <Popover.Dialog>
-          <Popover.Arrow />
-          <Popover.Heading>Switch workspace</Popover.Heading>
-          <div className="mt-2 flex flex-col gap-1">
-            {PERSONAS.map((persona) => {
-              const isActive = persona.id === activePersonaId;
-              return (
-                <button
-                  key={persona.id}
-                  type="button"
-                  onClick={() => setActivePersona(persona.id)}
-                  className={`flex items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors ${
-                    isActive ? "bg-accent/10" : "hover:bg-default/60"
-                  }`}
-                >
-                  <Avatar size="sm">
-                    <Avatar.Fallback style={personaAvatarStyle(persona)}>
-                      {persona.initials}
-                    </Avatar.Fallback>
-                  </Avatar>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[13px] font-medium">{persona.name}</p>
-                    <p className="truncate text-xs text-muted">{persona.role}</p>
-                  </div>
-                  {isActive && (
-                    <span className="size-2 rounded-full" style={{ backgroundColor: persona.color }} />
-                  )}
-                </button>
-              );
-            })}
-          </div>
-          <Separator className="my-3" />
-          <p className="mb-1.5 text-xs font-medium tracking-wide text-muted uppercase">
-            Theme
-          </p>
-          <ThemeSwitcher />
-        </Popover.Dialog>
-      </Popover.Content>
-    </Popover>
   );
 }
 
@@ -198,7 +112,20 @@ export function Sidebar() {
       </div>
 
       <nav className="flex flex-col gap-0.5 px-2">
-        {NAV.map((item) => (
+        {PRIMARY_NAV.map((item) => (
+          <NavItem
+            key={item.href}
+            href={item.href}
+            label={item.label}
+            icon={item.icon}
+            active={pathname === item.href}
+            collapsed={sidebarCollapsed}
+          />
+        ))}
+        {!sidebarCollapsed && SECONDARY_NAV.length > 0 && (
+          <div className="my-2 border-t border-border/60" />
+        )}
+        {SECONDARY_NAV.map((item) => (
           <NavItem
             key={item.href}
             href={item.href}

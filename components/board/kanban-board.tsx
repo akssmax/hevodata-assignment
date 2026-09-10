@@ -4,6 +4,7 @@ import {
   DndContext,
   DragOverlay,
   PointerSensor,
+  TouchSensor,
   pointerWithin,
   rectIntersection,
   useDraggable,
@@ -20,6 +21,7 @@ import { Chip, Spinner } from "@heroui/react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useMemo, useState } from "react";
 import { IssueCard } from "@/components/issue/issue-card";
+import { ScopeTabs } from "@/components/scope/scope-tabs";
 import { useSearch, useWorkspace } from "@/components/workspace-provider";
 import { groupByStatus, useIssues } from "@/hooks/use-issues";
 import { STATUS_DOT, STATUS_LABELS } from "@/lib/constants";
@@ -64,6 +66,15 @@ function DraggableIssue({ issue, onOpen }: { issue: Issue; onOpen: (id: string) 
     [setDragRef, setDropRef],
   );
 
+  // Stable identity keeps IssueCard's memoization intact across drag state changes.
+  const handleOpen = useCallback(
+    (id: string) => {
+      if (isDragging) return;
+      onOpen(id);
+    },
+    [isDragging, onOpen],
+  );
+
   return (
     <div
       ref={setNodeRef}
@@ -76,7 +87,7 @@ function DraggableIssue({ issue, onOpen }: { issue: Issue; onOpen: (id: string) 
       {...attributes}
       {...listeners}
     >
-      <IssueCard issue={issue} onOpen={isDragging ? () => undefined : onOpen} />
+      <IssueCard draggable issue={issue} onOpen={handleOpen} />
     </div>
   );
 }
@@ -85,10 +96,12 @@ function Column({
   status,
   issues,
   onOpen,
+  stacked = false,
 }: {
   status: Status;
   issues: Issue[];
   onOpen: (id: string) => void;
+  stacked?: boolean;
 }) {
   const { setNodeRef, isOver } = useDroppable({
     id: status,
@@ -98,9 +111,9 @@ function Column({
   return (
     <section
       ref={setNodeRef}
-      className={`flex w-72 shrink-0 flex-col rounded-xl p-3 transition-colors ${
-        isOver ? "bg-accent/10" : "bg-default/40"
-      }`}
+      className={`flex flex-col rounded-xl p-3 transition-colors ${
+        stacked ? "w-full" : "w-72 shrink-0"
+      } ${isOver ? "bg-accent/10" : "bg-default/40"}`}
     >
       <div className="mb-3 flex items-center justify-between px-1">
         <h2 className="flex items-center gap-2 text-[13px] font-medium">
@@ -144,11 +157,14 @@ function Column({
 
 export function KanbanBoard() {
   const { search } = useSearch();
-  const { openIssue, activePersonaId } = useWorkspace();
-  const issues = useIssues(activePersonaId, search);
+  const { openIssue, activePersonaId, activeScope } = useWorkspace();
+  const issues = useIssues(activePersonaId, search, activeScope);
   const grouped = useMemo(() => groupByStatus(issues), [issues]);
   const [active, setActive] = useState<Issue | null>(null);
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 8 } }),
+  );
 
   if (issues === undefined) {
     return (
@@ -192,26 +208,43 @@ export function KanbanBoard() {
   }
 
   return (
-    <div className="h-full overflow-x-auto px-5 py-5">
-      <DndContext
-        collisionDetection={collisionDetection}
-        sensors={sensors}
-        onDragEnd={onDragEnd}
-        onDragStart={onDragStart}
-      >
+    <DndContext
+      collisionDetection={collisionDetection}
+      sensors={sensors}
+      onDragEnd={onDragEnd}
+      onDragStart={onDragStart}
+    >
+      <div className="flex flex-col gap-4 px-4 py-4 md:hidden">
+        <ScopeTabs compact className="w-full" />
+        {STATUSES.map((status) => (
+          <Column
+            key={status}
+            issues={grouped[status]}
+            stacked
+            status={status}
+            onOpen={openIssue}
+          />
+        ))}
+      </div>
+      <div className="hidden h-full flex-col overflow-hidden md:flex">
+        <div className="shrink-0 px-5 pt-4">
+          <ScopeTabs className="max-w-md" />
+        </div>
+        <div className="min-h-0 flex-1 overflow-x-auto px-5 pb-5">
         <div className="flex h-full min-w-max gap-3">
           {STATUSES.map((status) => (
             <Column key={status} issues={grouped[status]} status={status} onOpen={openIssue} />
           ))}
         </div>
-        <DragOverlay dropAnimation={{ duration: 180, easing: "ease-out" }}>
-          {active ? (
-            <div className="w-72 rotate-2 cursor-grabbing shadow-lg">
-              <IssueCard issue={active} onOpen={() => undefined} />
-            </div>
-          ) : null}
-        </DragOverlay>
-      </DndContext>
-    </div>
+        </div>
+      </div>
+      <DragOverlay dropAnimation={{ duration: 180, easing: "ease-out" }}>
+        {active ? (
+          <div className="w-full max-w-72 rotate-2 cursor-grabbing shadow-lg md:w-72">
+            <IssueCard issue={active} onOpen={() => undefined} />
+          </div>
+        ) : null}
+      </DragOverlay>
+    </DndContext>
   );
 }

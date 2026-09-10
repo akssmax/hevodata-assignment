@@ -1,4 +1,4 @@
-import type { Priority, Status } from "./types";
+import type { IssueScope, Priority, Status } from "./types";
 
 export const STATUS_LABELS: Record<Status, string> = {
   backlog: "Backlog",
@@ -31,6 +31,17 @@ export const STATUS_DOT: Record<Status, string> = {
   todo: "#93c5fd", // blue-300
   in_progress: "#fcd34d", // amber-300
   done: "#6ee7b7", // emerald-300
+};
+
+export const SCOPE_LABELS: Record<IssueScope, string> = {
+  work: "Work",
+  personal: "Personal",
+};
+
+/** Life-area accent colors (Tailwind 300 shades) */
+export const SCOPE_DOT: Record<IssueScope, string> = {
+  work: "#93c5fd", // blue-300
+  personal: "#f9a8d4", // pink-300
 };
 
 export const CALENDAR_START_HOUR = 7;

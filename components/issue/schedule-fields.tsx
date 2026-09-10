@@ -62,11 +62,11 @@ function CalendarChrome() {
   );
 }
 
-function DatePickerTriggerField() {
+function DatePickerTriggerField({ compact = false }: { compact?: boolean }) {
   return (
-    <DatePicker.Trigger className="w-full p-0">
-      <DateField.Group fullWidth>
-        <DateField.Input>
+    <DatePicker.Trigger className={`w-full p-0 ${compact ? "min-h-8" : ""}`}>
+      <DateField.Group fullWidth className={compact ? "min-h-8" : undefined}>
+        <DateField.Input className={compact ? "text-xs" : undefined}>
           {(segment) => <DateField.Segment segment={segment} />}
         </DateField.Input>
         <DateField.Suffix>
@@ -81,10 +81,12 @@ export function DueDateField({
   label,
   value,
   onChange,
+  compact = false,
 }: {
   label?: string;
   value: string | null;
   onChange: (value: string | null) => void;
+  compact?: boolean;
 }) {
   return (
     <DatePicker
@@ -94,7 +96,7 @@ export function DueDateField({
       onChange={(next) => onChange(fromDateValue(next))}
     >
       {label ? <Label>{label}</Label> : null}
-      <DatePickerTriggerField />
+      <DatePickerTriggerField compact={compact} />
       <DatePicker.Popover>
         <Calendar aria-label={label}>
           <CalendarChrome />
@@ -106,42 +108,57 @@ export function DueDateField({
 
 export function DateTimeField({
   label,
+  ariaLabel = label,
   value,
   onChange,
+  compact = false,
 }: {
   label: string;
+  /** Used when `label` is empty but the field still needs an accessible name. */
+  ariaLabel?: string;
   value: string | null;
   onChange: (value: string | null) => void;
+  compact?: boolean;
 }) {
   const { day, time } = splitIso(value);
+  const name = ariaLabel || label;
+  const showClear = Boolean(value) && !compact;
 
   return (
-    <div className="flex flex-col gap-1.5">
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-medium text-foreground">{label}</span>
-        {value && (
+    <div className={compact ? "flex flex-col" : "flex flex-col gap-1.5"}>
+      {label ? (
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-medium text-foreground">{label}</span>
+          {showClear && (
+            <Button size="sm" variant="ghost" onPress={() => onChange(null)}>
+              Clear
+            </Button>
+          )}
+        </div>
+      ) : showClear ? (
+        <div className="flex justify-end">
           <Button size="sm" variant="ghost" onPress={() => onChange(null)}>
             Clear
           </Button>
-        )}
-      </div>
+        </div>
+      ) : null}
       <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
         <DatePicker
-          aria-label={`${label} date`}
+          aria-label={`${name} date`}
           className="min-w-0 w-full"
           value={day}
           onChange={(next) => onChange(combineIso(next, time ?? new Time(9, 0)))}
         >
-          <DatePickerTriggerField />
+          <DatePickerTriggerField compact={compact} />
           <DatePicker.Popover>
-            <Calendar aria-label={`${label} date`}>
+            <Calendar aria-label={`${name} date`}>
               <CalendarChrome />
             </Calendar>
           </DatePicker.Popover>
         </DatePicker>
         <TimeField
-          aria-label={`${label} time`}
-          className="w-[7.25rem] shrink-0"
+          aria-label={`${name} time`}
+          className={`shrink-0 ${compact ? "w-[6.5rem]" : "w-[7.25rem]"}`}
           value={time}
           onChange={(next) => {
             if (!next) return;
@@ -149,8 +166,8 @@ export function DateTimeField({
             onChange(combineIso(base, next as Time));
           }}
         >
-          <TimeField.Group fullWidth>
-            <TimeField.Input>
+          <TimeField.Group fullWidth className={compact ? "min-h-8" : undefined}>
+            <TimeField.Input className={compact ? "text-xs" : undefined}>
               {(segment) => <TimeField.Segment segment={segment} />}
             </TimeField.Input>
           </TimeField.Group>

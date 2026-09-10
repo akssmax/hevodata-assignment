@@ -24,12 +24,14 @@ export function FieldSelect<T extends string>({
   onChange,
   options,
   renderIcon,
+  compact = false,
 }: {
   label?: string;
   value: T;
   onChange: (value: T) => void;
   options: { id: T; label: string }[];
   renderIcon?: (id: T) => React.ReactNode;
+  compact?: boolean;
 }) {
   return (
     <Select
@@ -40,7 +42,7 @@ export function FieldSelect<T extends string>({
       }}
     >
       {label ? <Label>{label}</Label> : null}
-      <Select.Trigger>
+      <Select.Trigger className={compact ? "min-h-8 h-8 py-0 text-xs" : undefined}>
         <Select.Value />
         <Select.Indicator />
       </Select.Trigger>

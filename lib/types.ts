@@ -7,6 +7,9 @@ export type Priority = (typeof PRIORITIES)[number];
 export const KINDS = ["task", "event"] as const;
 export type IssueKind = (typeof KINDS)[number];
 
+export const SCOPES = ["work", "personal"] as const;
+export type IssueScope = (typeof SCOPES)[number];
+
 export const MEETING_PLATFORMS = ["google_meet", "microsoft_teams"] as const;
 export type MeetingPlatform = (typeof MEETING_PLATFORMS)[number];
 
@@ -30,6 +33,7 @@ export interface Issue {
   id: string;
   identifier: string;
   ownerId: string;
+  scope: IssueScope;
   kind: IssueKind;
   title: string;
   description: string;
@@ -56,6 +60,7 @@ export interface CreateIssueInput {
   title: string;
   description?: string;
   ownerId: string;
+  scope?: IssueScope;
   kind?: IssueKind;
   status?: Status;
   priority?: Priority;
@@ -70,6 +75,7 @@ export interface UpdateIssueInput {
   title?: string;
   description?: string;
   kind?: IssueKind;
+  scope?: IssueScope;
   status?: Status;
   priority?: Priority;
   rank?: string;

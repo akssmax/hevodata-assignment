@@ -5,15 +5,19 @@ import { motion } from "framer-motion";
 import { memo } from "react";
 import { IconCalendar } from "@/components/icons";
 import { PriorityIcon } from "@/components/issue/priority-icon";
+import { ScopeIcon, scopeBorderStyle } from "@/components/issue/scope-badge";
 import { formatTimeRange, toDateKey } from "@/lib/dates";
 import type { Issue } from "@/lib/types";
 
 export const IssueCard = memo(function IssueCard({
   issue,
   onOpen,
+  draggable = false,
 }: {
   issue: Issue;
   onOpen: (id: string) => void;
+  /** Grab cursor for Kanban drag handles; default is a normal click pointer. */
+  draggable?: boolean;
 }) {
   const time = formatTimeRange(issue.startAt, issue.endAt);
   const overdue = Boolean(
@@ -34,10 +38,14 @@ export const IssueCard = memo(function IssueCard({
       whileHover={{ y: -2 }}
       whileTap={{ scale: 0.98 }}
       transition={{ type: "spring", stiffness: 500, damping: 32 }}
-      className="w-full cursor-grab rounded-lg border border-border/70 bg-surface px-3 py-2.5 text-left shadow-sm transition-colors hover:border-border hover:bg-surface active:cursor-grabbing"
+      className={`w-full rounded-lg border border-l-2 border-border/70 bg-surface px-3 py-2.5 text-left shadow-sm transition-colors hover:border-border hover:bg-surface ${
+        draggable ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"
+      }`}
+      style={scopeBorderStyle(issue.scope)}
     >
       <div className="mb-1.5 flex items-center gap-2">
         <PriorityIcon priority={issue.priority} />
+        <ScopeIcon scope={issue.scope} />
         <span className="font-mono text-xs text-muted">{issue.identifier}</span>
         {issue.kind === "event" && <IconCalendar className="size-3 text-indigo-300" />}
       </div>

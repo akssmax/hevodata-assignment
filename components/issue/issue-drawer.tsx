@@ -6,22 +6,30 @@ import {
   Chip,
   Drawer,
   Input,
-  Label,
   Separator,
   Spinner,
   TextArea,
   TextField,
 } from "@heroui/react";
+import {
+  CalendarDaysIcon,
+  ClockIcon,
+  FlagIcon,
+  UserCircleIcon,
+} from "@heroicons/react/24/outline";
 import { motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { IconCalendar, IconPlus } from "@/components/icons";
 import { MeetingJoinLink } from "@/components/issue/meeting-join";
 import { FieldSelect, PriorityOptionIcon, StatusDotIcon } from "@/components/issue/field-select";
+import { ScopeIcon, ScopeOptionIcon } from "@/components/issue/scope-badge";
+import { PropertyField } from "@/components/issue/issue-property-field";
+import { PriorityIcon } from "@/components/issue/priority-icon";
 import { DateTimeField, DueDateField } from "@/components/issue/schedule-fields";
 import { useWorkspace } from "@/components/workspace-provider";
 import { useIssue } from "@/hooks/use-issues";
-import { PRIORITY_LABELS, STATUS_LABELS } from "@/lib/constants";
-import { formatTimeRange } from "@/lib/dates";
+import { PRIORITY_LABELS, SCOPE_LABELS, STATUS_LABELS } from "@/lib/constants";
+import { formatDayLabel, formatTime, formatTimeRange, parseDateKey } from "@/lib/dates";
 import {
   addAttachment,
   addComment,
@@ -31,10 +39,23 @@ import {
   updateIssue,
 } from "@/lib/issue-service";
 import { getPersona, personaAvatarStyle } from "@/lib/personas";
-import { PRIORITIES, STATUSES, type Issue, type Priority, type Status } from "@/lib/types";
+import {
+  PRIORITIES,
+  SCOPES,
+  STATUSES,
+  type Issue,
+  type IssueScope,
+  type Priority,
+  type Status,
+} from "@/lib/types";
 
 const STATUS_OPTIONS = STATUSES.map((id) => ({ id, label: STATUS_LABELS[id] }));
 const PRIORITY_OPTIONS = PRIORITIES.map((id) => ({ id, label: PRIORITY_LABELS[id] }));
+const SCOPE_OPTIONS = SCOPES.map((id) => ({ id, label: SCOPE_LABELS[id] }));
+
+const MAX_ATTACHMENT_FILES = 5;
+/** Attachments are stored inline as data URLs, so keep them small. */
+const MAX_ATTACHMENT_BYTES = 2 * 1024 * 1024;
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -64,36 +85,83 @@ function readFile(file: File): Promise<{ name: string; size: number; type: strin
   });
 }
 
-function PropertyRow({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <p className="text-xs font-medium tracking-wide text-muted uppercase">{label}</p>
-      {children}
-    </div>
-  );
+function EmptyValue({ children = "Empty" }: { children?: string }) {
+  return <span className="text-muted">{children}</span>;
+}
+
+function formatDueSummary(dateKey: string | null): React.ReactNode {
+  if (!dateKey) return <EmptyValue />;
+  return formatDayLabel(parseDateKey(dateKey));
+}
+
+function formatDateTimeSummary(iso: string | null): React.ReactNode {
+  if (!iso) return <EmptyValue />;
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return <EmptyValue />;
+  return `${formatDayLabel(date)} · ${formatTime(iso)}`;
 }
 
 function AttachmentsSection({ issue }: { issue: Issue }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
   const attachments = issue.attachments ?? [];
 
   async function onFiles(files: FileList | null) {
     if (!files?.length) return;
+    setNotice(null);
     setUploading(true);
+
+    const selected = Array.from(files);
+    const withinLimit = selected.slice(0, MAX_ATTACHMENT_FILES);
+    const eligible = withinLimit.filter((file) => file.size <= MAX_ATTACHMENT_BYTES);
+    const skipped: string[] = [];
+
+    if (selected.length > MAX_ATTACHMENT_FILES) {
+      skipped.push(`Only the first ${MAX_ATTACHMENT_FILES} files were added.`);
+    }
+
+    const oversized = withinLimit.length - eligible.length;
+    if (oversized > 0) {
+      skipped.push(`${oversized} file${oversized === 1 ? "" : "s"} skipped for exceeding 2 MB.`);
+    }
+
     try {
-      const eligible = Array.from(files)
-        .slice(0, 5)
-        .filter((file) => file.size <= 2 * 1024 * 1024);
-      await Promise.all(eligible.map((file) => readFile(file).then((data) => addAttachment(issue.id, data))));
+      const results = await Promise.allSettled(
+        eligible.map((file) => readFile(file).then((data) => addAttachment(issue.id, data))),
+      );
+      const failed = results.filter((result) => result.status === "rejected");
+      if (failed.length > 0) {
+        console.error("Attachment upload failed", failed);
+        skipped.push(
+          `${failed.length} file${failed.length === 1 ? "" : "s"} could not be saved. Your browser storage may be full.`,
+        );
+      }
     } finally {
       setUploading(false);
+      setNotice(skipped.length > 0 ? skipped.join(" ") : null);
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
   }
 
   return (
-    <div className="flex flex-col gap-2">
+    <div
+      className="flex flex-col gap-2"
+      onDragOver={(event) => {
+        event.preventDefault();
+        setDragActive(true);
+      }}
+      onDragLeave={(event) => {
+        if (event.currentTarget.contains(event.relatedTarget as Node | null)) return;
+        setDragActive(false);
+      }}
+      onDrop={(event) => {
+        event.preventDefault();
+        setDragActive(false);
+        void onFiles(event.dataTransfer.files);
+      }}
+    >
       <div className="flex items-center justify-between">
         <p className="text-xs font-medium tracking-wide text-muted uppercase">
           Attachments {attachments.length > 0 && `(${attachments.length})`}
@@ -116,16 +184,29 @@ function AttachmentsSection({ issue }: { issue: Issue }) {
           onChange={(event) => void onFiles(event.target.files)}
         />
       </div>
+      {notice && (
+        <p role="status" className="text-xs leading-relaxed text-danger">
+          {notice}
+        </p>
+      )}
       {attachments.length === 0 ? (
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
-          className="rounded-lg border border-dashed border-border px-3 py-4 text-center text-xs text-muted transition-colors hover:border-accent/50 hover:text-foreground"
+          className={`rounded-lg border border-dashed px-3 py-4 text-center text-xs transition-colors ${
+            dragActive
+              ? "border-accent bg-accent/5 text-foreground"
+              : "border-border text-muted hover:border-accent/50 hover:text-foreground"
+          }`}
         >
           Drop files here or click to upload (max 2 MB)
         </button>
       ) : (
-        <div className="flex flex-col gap-1.5">
+        <div
+          className={`flex flex-col gap-1.5 rounded-lg transition-colors ${
+            dragActive ? "ring-1 ring-accent ring-offset-2 ring-offset-background" : ""
+          }`}
+        >
           {attachments.map((attachment) => (
             <motion.div
               key={attachment.id}
@@ -210,7 +291,8 @@ function CommentsSection({ issue }: { issue: Issue }) {
                     <p className="text-xs text-muted">{formatRelative(comment.createdAt)}</p>
                     <button
                       type="button"
-                      className="ml-auto text-xs text-muted opacity-0 transition-opacity group-hover:opacity-100 hover:text-danger"
+                      aria-label={`Delete comment by ${author.name}`}
+                      className="ml-auto min-h-11 min-w-11 text-xs text-muted opacity-100 transition-opacity hover:text-danger focus-visible:opacity-100 md:min-h-0 md:min-w-0 md:opacity-0 md:group-hover:opacity-100"
                       onClick={() => deleteComment(issue.id, comment.id)}
                     >
                       Delete
@@ -270,16 +352,27 @@ export function IssueDrawer() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [status, setStatus] = useState<Status>("todo");
+  const [scope, setScope] = useState<IssueScope>("work");
   const [priority, setPriority] = useState<Priority>("none");
   const [dueDate, setDueDate] = useState<string | null>(null);
   const [startAt, setStartAt] = useState<string | null>(null);
   const [endAt, setEndAt] = useState<string | null>(null);
+  // Tracking the armed issue id means a pending delete can never carry over to another issue.
+  const [confirmTarget, setConfirmTarget] = useState<string | null>(null);
+  const confirmingDelete = confirmTarget !== null && confirmTarget === selectedIssueId;
+
+  useEffect(() => {
+    if (!confirmingDelete) return;
+    const timer = setTimeout(() => setConfirmTarget(null), 4000);
+    return () => clearTimeout(timer);
+  }, [confirmingDelete]);
 
   useEffect(() => {
     if (!issue) return;
     setTitle(issue.title);
     setDescription(issue.description);
     setStatus(issue.status);
+    setScope(issue.scope);
     setPriority(issue.priority);
     setDueDate(issue.dueDate ?? null);
     setStartAt(issue.startAt ?? null);
@@ -298,7 +391,7 @@ export function IssueDrawer() {
     <Drawer>
       <Drawer.Backdrop isOpen={Boolean(selectedIssueId)} onOpenChange={(open) => !open && closeIssue()}>
         <Drawer.Content placement="right">
-          <Drawer.Dialog className="w-[min(100vw,30rem)] max-w-[90vw]">
+          <Drawer.Dialog className="w-full max-w-none md:w-[min(100vw,30rem)] md:max-w-[90vw]">
             <Drawer.CloseTrigger />
             <Drawer.Header>
               <div className="flex items-center gap-2">
@@ -313,7 +406,7 @@ export function IssueDrawer() {
                 )}
               </div>
             </Drawer.Header>
-            <Drawer.Body className="flex flex-col gap-5">
+            <Drawer.Body className="flex flex-col gap-4">
               {loading ? (
                 <div className="flex justify-center py-10">
                   <Spinner />
@@ -328,25 +421,25 @@ export function IssueDrawer() {
                     onChange={setTitle}
                     onBlur={() => persist({ title })}
                   >
-                    <Label>Title</Label>
-                    <Input />
-                  </TextField>
-                  <TextField
-                    name="description"
-                    value={description}
-                    onChange={setDescription}
-                    onBlur={() => persist({ description })}
-                  >
-                    <Label>Description</Label>
-                    <TextArea placeholder="Add context, notes, or links..." rows={4} />
+                    <Input
+                      className="border-transparent bg-transparent px-0 text-lg font-semibold shadow-none transition-colors hover:bg-surface/40 focus:bg-surface/40"
+                      placeholder="Issue title"
+                    />
                   </TextField>
 
-                  <Separator />
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <PropertyRow label="Status">
+                  <div className="flex flex-col gap-0.5 rounded-xl border border-border/60 bg-surface/20 px-1 py-1">
+                    <PropertyField
+                      label="Status"
+                      icon={<StatusDotIcon status={status} />}
+                      summary={
+                        <span className="flex items-center gap-2">
+                          <StatusDotIcon status={status} />
+                          {STATUS_LABELS[status]}
+                        </span>
+                      }
+                    >
                       <FieldSelect
-                        label=""
+                        compact
                         options={STATUS_OPTIONS}
                         renderIcon={(id) => <StatusDotIcon status={id} />}
                         value={status}
@@ -355,10 +448,46 @@ export function IssueDrawer() {
                           persist({ status: next });
                         }}
                       />
-                    </PropertyRow>
-                    <PropertyRow label="Priority">
+                    </PropertyField>
+
+                    <PropertyField
+                      label="Scope"
+                      icon={<ScopeIcon scope={scope} className="size-3.5" />}
+                      summary={
+                        <span className="flex items-center gap-2">
+                          <ScopeIcon scope={scope} />
+                          {SCOPE_LABELS[scope]}
+                        </span>
+                      }
+                    >
                       <FieldSelect
-                        label=""
+                        compact
+                        options={SCOPE_OPTIONS}
+                        renderIcon={(id) => <ScopeOptionIcon scope={id} />}
+                        value={scope}
+                        onChange={(next) => {
+                          setScope(next);
+                          persist({ scope: next });
+                        }}
+                      />
+                    </PropertyField>
+
+                    <PropertyField
+                      label="Priority"
+                      icon={<FlagIcon className="size-3.5" />}
+                      summary={
+                        priority === "none" ? (
+                          <EmptyValue />
+                        ) : (
+                          <span className="flex items-center gap-2">
+                            <PriorityIcon priority={priority} />
+                            {PRIORITY_LABELS[priority]}
+                          </span>
+                        )
+                      }
+                    >
+                      <FieldSelect
+                        compact
                         options={PRIORITY_OPTIONS}
                         renderIcon={(id) => <PriorityOptionIcon priority={id} />}
                         value={priority}
@@ -367,58 +496,96 @@ export function IssueDrawer() {
                           persist({ priority: next });
                         }}
                       />
-                    </PropertyRow>
-                    <PropertyRow label="Assignee">
-                      <div className="flex items-center gap-2 rounded-lg border border-border px-2.5 py-2">
-                        <Avatar size="sm">
-                          <Avatar.Fallback style={personaAvatarStyle(owner!)}>
-                            {owner!.initials}
-                          </Avatar.Fallback>
-                        </Avatar>
-                        <div className="min-w-0">
-                          <p className="truncate text-xs font-medium">{owner!.name}</p>
-                          <p className="truncate text-xs text-muted">{owner!.role}</p>
-                        </div>
-                      </div>
-                    </PropertyRow>
-                    <PropertyRow label="Due date">
+                    </PropertyField>
+
+                    <PropertyField
+                      interactive={false}
+                      label="Assignee"
+                      icon={<UserCircleIcon className="size-3.5" />}
+                      summary={
+                        <span className="flex items-center gap-2">
+                          <Avatar size="sm">
+                            <Avatar.Fallback style={personaAvatarStyle(owner!)}>
+                              {owner!.initials}
+                            </Avatar.Fallback>
+                          </Avatar>
+                          {owner!.name}
+                        </span>
+                      }
+                    />
+
+                    <PropertyField
+                      label="Due date"
+                      icon={<CalendarDaysIcon className="size-3.5" />}
+                      summary={formatDueSummary(dueDate)}
+                    >
                       <DueDateField
-                        label=""
+                        compact
                         value={dueDate}
                         onChange={(next) => {
                           setDueDate(next);
                           persist({ dueDate: next });
                         }}
                       />
-                    </PropertyRow>
+                    </PropertyField>
+
+                    <PropertyField
+                      label="Starts"
+                      icon={<ClockIcon className="size-3.5" />}
+                      summary={formatDateTimeSummary(startAt)}
+                    >
+                      <DateTimeField
+                        compact
+                        label=""
+                        ariaLabel="Start"
+                        value={startAt}
+                        onChange={(next) => {
+                          setStartAt(next);
+                          persist({ startAt: next });
+                        }}
+                      />
+                    </PropertyField>
+
+                    <PropertyField
+                      label="Ends"
+                      icon={<ClockIcon className="size-3.5" />}
+                      summary={formatDateTimeSummary(endAt)}
+                    >
+                      <DateTimeField
+                        compact
+                        label=""
+                        ariaLabel="End"
+                        value={endAt}
+                        onChange={(next) => {
+                          setEndAt(next);
+                          persist({ endAt: next });
+                        }}
+                      />
+                    </PropertyField>
                   </div>
 
-                  <div className="flex flex-col gap-3">
-                    <p className="text-xs font-medium tracking-wide text-muted uppercase">
-                      Schedule {timeRange && <span className="text-accent normal-case">· {timeRange}</span>}
+                  {issue.kind === "event" && issue.meetingUrl && (
+                    <MeetingJoinLink issue={issue} variant="inline" />
+                  )}
+
+                  {timeRange && (
+                    <p className="px-2 text-xs text-muted">
+                      Scheduled <span className="text-foreground/80">{timeRange}</span>
                     </p>
-                    <DateTimeField
-                      label="Starts"
-                      value={startAt}
-                      onChange={(next) => {
-                        setStartAt(next);
-                        persist({ startAt: next });
-                      }}
+                  )}
+
+                  <TextField
+                    name="description"
+                    value={description}
+                    onChange={setDescription}
+                    onBlur={() => persist({ description })}
+                  >
+                    <TextArea
+                      className="min-h-[5rem] rounded-lg border-transparent bg-default/40 px-2 shadow-none transition-colors hover:bg-surface/50 focus:bg-surface/50"
+                      placeholder="Add description, or write with context..."
+                      rows={4}
                     />
-                    <DateTimeField
-                      label="Ends"
-                      value={endAt}
-                      onChange={(next) => {
-                        setEndAt(next);
-                        persist({ endAt: next });
-                      }}
-                    />
-                    {issue.kind === "event" && issue.meetingUrl && (
-                      <div className="pt-1">
-                        <MeetingJoinLink issue={issue} variant="inline" />
-                      </div>
-                    )}
-                  </div>
+                  </TextField>
 
                   <Separator />
 
@@ -439,14 +606,28 @@ export function IssueDrawer() {
                 variant="danger"
                 onPress={async () => {
                   if (!issue) return;
+                  if (!confirmingDelete) {
+                    setConfirmTarget(issue.id);
+                    return;
+                  }
                   await deleteIssue(issue.id);
+                  setConfirmTarget(null);
                   closeIssue();
                 }}
               >
-                Delete
+                {confirmingDelete ? "Confirm delete" : "Delete"}
               </Button>
-              <Button variant="secondary" onPress={closeIssue}>
-                Close
+              <Button
+                variant="secondary"
+                onPress={() => {
+                  if (confirmingDelete) {
+                    setConfirmTarget(null);
+                    return;
+                  }
+                  closeIssue();
+                }}
+              >
+                {confirmingDelete ? "Cancel" : "Close"}
               </Button>
             </Drawer.Footer>
           </Drawer.Dialog>

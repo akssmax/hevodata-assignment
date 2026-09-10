@@ -29,7 +29,7 @@ export function EmptyState({
       <p className="text-sm font-medium">{title}</p>
       {description && <p className="max-w-xs text-xs text-muted">{description}</p>}
       {actionLabel && onAction && (
-        <Button className="mt-1" size="sm" variant="secondary" onPress={onAction}>
+        <Button className="mt-1 min-h-11 md:min-h-0" size="md" variant="secondary" onPress={onAction}>
           {actionLabel}
         </Button>
       )}
