@@ -97,7 +97,7 @@ export function DueDateField({
     >
       {label ? <Label>{label}</Label> : null}
       <DatePickerTriggerField compact={compact} />
-      <DatePicker.Popover>
+      <DatePicker.Popover className="z-[100000]" placement="bottom start">
         <Calendar aria-label={label}>
           <CalendarChrome />
         </Calendar>
@@ -150,7 +150,7 @@ export function DateTimeField({
           onChange={(next) => onChange(combineIso(next, time ?? new Time(9, 0)))}
         >
           <DatePickerTriggerField compact={compact} />
-          <DatePicker.Popover>
+          <DatePicker.Popover className="z-[100000]" placement="bottom start">
             <Calendar aria-label={`${name} date`}>
               <CalendarChrome />
             </Calendar>

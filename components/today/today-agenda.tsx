@@ -1,8 +1,9 @@
 "use client";
 
-import { Chip, Popover, Spinner } from "@heroui/react";
+import { Chip, Spinner } from "@heroui/react";
 import { motion } from "framer-motion";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Dialog, Popover as AriaPopover } from "react-aria-components";
 import { EmptyState } from "@/components/empty-state";
 import { IconCalendar, IconInbox } from "@/components/icons";
 import { IssueCard } from "@/components/issue/issue-card";
@@ -59,7 +60,7 @@ function DayStripBlock({
 }) {
   const [open, setOpen] = useState(false);
   const [canHover, setCanHover] = useState(false);
-  const hovering = useRef(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -78,7 +79,6 @@ function DayStripBlock({
   const timeRange = formatTimeRange(issue.startAt, issue.endAt);
 
   function showPopover() {
-    hovering.current = true;
     if (closeTimer.current) {
       clearTimeout(closeTimer.current);
       closeTimer.current = null;
@@ -87,14 +87,20 @@ function DayStripBlock({
   }
 
   function scheduleClose() {
-    hovering.current = false;
     closeTimer.current = setTimeout(() => setOpen(false), 120);
   }
 
-  /** Popover opens on hover only — ignore the trigger's default click-to-toggle. */
-  function onPopoverOpenChange(next: boolean) {
-    if (next && !hovering.current) return;
-    setOpen(next);
+  function openIssue() {
+    setOpen(false);
+    onOpen(issue.id);
+  }
+
+  function handleClick() {
+    if (!canHover && !open) {
+      showPopover();
+      return;
+    }
+    openIssue();
   }
 
   return (
@@ -102,50 +108,47 @@ function DayStripBlock({
       className="absolute top-2 bottom-2 min-w-11"
       style={{ left: `${left}%`, width: `${width}%` }}
     >
-      <Popover isOpen={open} onOpenChange={onPopoverOpenChange}>
-        <Popover.Trigger
-          aria-label={`${issue.title}, ${timeRange}`}
-          className={`flex h-full min-h-11 w-full cursor-pointer flex-col justify-center gap-0.5 overflow-hidden rounded-md border-2 px-2 text-left ${
-            isEvent
-              ? "bg-indigo-300/30 hover:bg-indigo-300/45"
-              : "bg-emerald-300/15 hover:bg-emerald-300/30"
-          }`}
-          style={{ borderColor: `${scopeColor}99` }}
-          onMouseEnter={canHover ? showPopover : undefined}
-          onMouseLeave={canHover ? scheduleClose : undefined}
-          onClick={() => {
-            if (!canHover && !open) {
-              showPopover();
-              return;
-            }
-            setOpen(false);
-            onOpen(issue.id);
-          }}
-        >
-          <motion.span
-            className="flex flex-col justify-center gap-0.5 overflow-hidden"
-            whileHover={{ scaleY: 1.06 }}
-            transition={{ type: "spring", stiffness: 500, damping: 30 }}
-          >
-            <span className="truncate text-xs leading-tight font-medium text-foreground">
-              {issue.title}
-            </span>
-            <span className="truncate text-xs leading-tight text-foreground/60">{timeRange}</span>
-          </motion.span>
-        </Popover.Trigger>
-        <Popover.Content
-          className="w-72"
-          offset={10}
-          placement="top"
-          onMouseEnter={canHover ? showPopover : undefined}
-          onMouseLeave={canHover ? scheduleClose : undefined}
-        >
-          <Popover.Dialog>
-            <Popover.Arrow />
-            <DayStripBlockDetails issue={issue} />
-          </Popover.Dialog>
-        </Popover.Content>
-      </Popover>
+      <button
+        ref={triggerRef}
+        type="button"
+        aria-expanded={open}
+        aria-label={`${issue.title}, ${timeRange}`}
+        className={`flex h-full min-h-11 w-full cursor-pointer flex-col justify-center gap-0.5 overflow-hidden rounded-md border-2 px-2 text-left transition-colors ${
+          isEvent
+            ? "bg-indigo-300/30 hover:bg-indigo-300/45"
+            : "bg-emerald-300/15 hover:bg-emerald-300/30"
+        }`}
+        style={{ borderColor: `${scopeColor}99`, touchAction: "manipulation" }}
+        onMouseEnter={canHover ? showPopover : undefined}
+        onMouseLeave={canHover ? scheduleClose : undefined}
+        onClick={handleClick}
+      >
+        <span className="flex flex-col justify-center gap-0.5 overflow-hidden">
+          <span className="truncate text-xs leading-tight font-medium text-foreground">
+            {issue.title}
+          </span>
+          <span className="truncate text-xs leading-tight text-foreground/60">{timeRange}</span>
+        </span>
+      </button>
+
+      <AriaPopover
+        triggerRef={triggerRef}
+        isOpen={open}
+        isNonModal
+        offset={10}
+        placement="top"
+        className="w-72 rounded-xl border border-border bg-surface p-3 shadow-lg outline-none"
+        onOpenChange={(next) => {
+          if (canHover) return;
+          setOpen(next);
+        }}
+        onMouseEnter={canHover ? showPopover : undefined}
+        onMouseLeave={canHover ? scheduleClose : undefined}
+      >
+        <Dialog className="outline-none">
+          <DayStripBlockDetails issue={issue} />
+        </Dialog>
+      </AriaPopover>
     </div>
   );
 }
@@ -299,10 +302,12 @@ export function TodayAgenda() {
             day: "numeric",
           })}
         </p>
-        <h2 className="mt-1 text-2xl font-semibold tracking-tight">
-          {greeting()}, {persona.firstName}
-        </h2>
-        <ScopeTabs className="mt-4 w-full max-w-md" />
+        <div className="mt-1 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <h2 className="min-w-0 text-2xl font-semibold tracking-tight">
+            {greeting()}, {persona.firstName}
+          </h2>
+          <ScopeTabs />
+        </div>
         <div className="mt-3 flex flex-wrap gap-2">
           <Chip size="sm" variant="soft" color="accent">
             {meetings.length} {meetings.length === 1 ? "meeting" : "meetings"}

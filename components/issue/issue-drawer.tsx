@@ -515,6 +515,7 @@ export function IssueDrawer() {
                     />
 
                     <PropertyField
+                      autoActivateOnPin
                       label="Due date"
                       icon={<CalendarDaysIcon className="size-3.5" />}
                       summary={formatDueSummary(dueDate)}
@@ -530,6 +531,7 @@ export function IssueDrawer() {
                     </PropertyField>
 
                     <PropertyField
+                      autoActivateOnPin
                       label="Starts"
                       icon={<ClockIcon className="size-3.5" />}
                       summary={formatDateTimeSummary(startAt)}
@@ -547,6 +549,7 @@ export function IssueDrawer() {
                     </PropertyField>
 
                     <PropertyField
+                      autoActivateOnPin
                       label="Ends"
                       icon={<ClockIcon className="size-3.5" />}
                       summary={formatDateTimeSummary(endAt)}

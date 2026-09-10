@@ -50,6 +50,13 @@ body {
 }
 
 /* Respect the OS motion setting across Framer Motion and CSS transitions alike. */
+/* Portaled pickers must sit above drawer/modal layers (both z-50). */
+[data-slot="date-picker-popover"],
+[data-slot="select-popover"],
+[data-slot="popover"] {
+  z-index: 100000;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
